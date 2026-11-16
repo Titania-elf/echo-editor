@@ -1,0 +1,16 @@
+{
+    "name": "echo-editor",
+    "version": "0.1.6",
+    "description": "回声编辑台：面向 SillyTavern 的手机优先预设编辑器",
+    "private": true,
+    "type": "module",
+    "author": "Titania-elf",
+    "homepage": "https://github.com/Titania-elf/echo-editor",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Titania-elf/echo-editor.git"
+    },
+    "scripts": {
+        "test": "node --test tests/model.test.mjs tests/save-queue.test.mjs"
+    }
+}

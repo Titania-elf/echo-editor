@@ -1,0 +1,208 @@
+/* Paper and night palettes are local to the editor; tavern mode inherits its colors. */
+#pmme-root {
+    color-scheme: light;
+    --pmme-ground: #ede7dc;
+    --pmme-surface: #f7f3ea;
+    --pmme-field: #fffdf7;
+    --pmme-ink: #303b3e;
+    --pmme-accent: #526d80;
+    --pmme-on-accent: #fffdf7;
+    --pmme-line: #ded8cb;
+    --pmme-muted: #687171;
+    --pmme-warning: #866733;
+    --pmme-danger: #a14342;
+    --pmme-shadow: #29261e1a;
+    --pmme-backdrop: #252b314f;
+    --pmme-switch-knob: #fffdf7;
+    position: fixed; inset: 0; top: var(--pmme-top, 0px); bottom: auto;
+    height: var(--pmme-height, 100dvh); z-index: 60000;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+    color: var(--pmme-ink); background: var(--pmme-ground);
+    font: 15px/1.55 var(--mainFontFamily, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    text-align: left; text-shadow: none; overflow: hidden;
+}
+#pmme-root[data-pmme-theme="night"] {
+    color-scheme: dark;
+    --pmme-ground: #171d24;
+    --pmme-surface: #212831;
+    --pmme-field: #272f39;
+    --pmme-ink: #e1e7e8;
+    --pmme-accent: #99b5c6;
+    --pmme-on-accent: #182125;
+    --pmme-line: #3b4550;
+    --pmme-muted: #a6b0b5;
+    --pmme-warning: #d1b884;
+    --pmme-danger: #dfa4a1;
+    --pmme-shadow: #02070b77;
+    --pmme-backdrop: #060b11b3;
+    --pmme-switch-knob: #e1e7e8;
+}
+#pmme-root[data-pmme-theme="tavern"] {
+    color-scheme: inherit;
+    text-shadow: inherit;
+    --pmme-ground: #172331;
+    --pmme-surface: var(--SmartThemeBlurTintColor, #192635);
+    --pmme-field: color-mix(in srgb, var(--pmme-ground) 12%, var(--pmme-surface));
+    --pmme-ink: var(--SmartThemeBodyColor, #e6edf6);
+    --pmme-accent: var(--SmartThemeQuoteColor, #a3bef5);
+    --pmme-on-accent: var(--pmme-ground);
+    --pmme-line: var(--SmartThemeBorderColor, #34465b);
+    --pmme-muted: color-mix(in srgb, var(--pmme-ink) 68%, transparent);
+    --pmme-warning: var(--SmartThemeEmColor, #e2bd84);
+    --pmme-danger: var(--fullred, #e5a6a6);
+    --pmme-shadow: #070f1a88;
+    --pmme-backdrop: #070f1a88;
+    --pmme-switch-knob: var(--pmme-ink);
+}
+#pmme-root[hidden], #pmme-root [hidden] { display: none !important; }
+#pmme-root *, #pmme-root *::before, #pmme-root *::after { box-sizing: border-box; }
+#pmme-root h2, #pmme-root h3, #pmme-root p { margin: 0; }
+#pmme-root button, #pmme-root input, #pmme-root select, #pmme-root textarea { font: inherit; max-width: 100%; }
+#pmme-root button { color: inherit; cursor: pointer; border: 0; background: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+#pmme-root button:disabled { opacity: .4; cursor: default; }
+#pmme-root button:focus-visible, #pmme-root input:focus-visible, #pmme-root select:focus-visible, #pmme-root textarea:focus-visible, #pmme-root summary:focus-visible { outline: 2px solid var(--pmme-accent); outline-offset: 2px; }
+.pmme-icon { width: 20px; height: 20px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#pmme-root .pmme-gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+#pmme-root .pmme-frame { width: 100%; max-width: 680px; height: 100%; min-height: 0; margin-inline: auto; background: var(--pmme-surface); }
+#pmme-root[data-pmme-theme="tavern"] .pmme-frame { backdrop-filter: blur(16px); }
+#pmme-root .pmme-directory-view, #pmme-root .pmme-full-view { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+#pmme-root .pmme-topbar { display: flex; align-items: center; gap: 10px; min-height: 58px; border-bottom: 1px solid var(--pmme-line); flex: 0 0 auto; }
+#pmme-root .pmme-topbar h2 { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 21px; font-weight: 600; flex: 1; white-space: nowrap; letter-spacing: .04em; }
+#pmme-root:not([data-pmme-theme="tavern"]) .pmme-topbar h2 { font-family: "Songti SC", "Noto Serif CJK SC", "STSong", "SimSun", serif; }
+#pmme-root .pmme-topbar h2 svg { color: var(--pmme-accent); }
+#pmme-root .pmme-button.pmme-return-button { padding-inline: 0; flex: 0 0 auto; }
+#pmme-root .pmme-button.pmme-theme-control { flex: 0 0 auto; gap: 5px; padding-inline: 9px; font-size: 12px; }
+#pmme-root .pmme-theme-control .pmme-icon { width: 17px; height: 17px; }
+#pmme-root .pmme-mode-label { font-size: 11px; color: var(--pmme-muted); border: 1px solid var(--pmme-line); padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
+#pmme-root .pmme-icon-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; min-height: 44px; padding: 0; flex: 0 0 auto; border-radius: 10px; }
+#pmme-root .pmme-icon-button:hover, #pmme-root .pmme-quiet:hover { background: color-mix(in srgb, var(--pmme-accent) 9%, transparent); }
+#pmme-root .pmme-preset { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-block: 14px 12px; flex: 0 0 auto; }
+#pmme-root .pmme-preset > div { min-width: 0; display: grid; gap: 4px; }
+#pmme-root .pmme-preset h3 { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+#pmme-root #pmme-status { font-size: 12px; color: var(--pmme-muted); }
+#pmme-root .pmme-pending, #pmme-root #pmme-status.pmme-pending { color: var(--pmme-warning); }
+#pmme-root .pmme-button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--pmme-line); border-radius: 10px; font-weight: 550; font-size: 14px; white-space: nowrap; }
+#pmme-root .pmme-primary { background: var(--pmme-accent); border-color: var(--pmme-accent); color: var(--pmme-on-accent); }
+#pmme-root .pmme-secondary { background: color-mix(in srgb, var(--pmme-accent) 9%, transparent); color: var(--pmme-accent); }
+#pmme-root .pmme-quiet { color: var(--pmme-muted); border-color: transparent; }
+#pmme-root .pmme-danger { color: var(--pmme-danger); }
+#pmme-root .pmme-grow { flex: 1; min-width: 0; }
+#pmme-root .pmme-row, #pmme-root .pmme-toolbar { display: flex; align-items: center; gap: 8px; min-width: 0; }
+#pmme-root .pmme-toolbar { padding-block: 2px 14px; flex: 0 0 auto; }
+#pmme-root .pmme-caption { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--pmme-muted); min-height: 39px; border-block: 1px solid var(--pmme-line); flex: 0 0 auto; }
+#pmme-root #pmme-count { flex: 0 0 auto; }
+#pmme-root .pmme-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
+#pmme-root .pmme-item { min-width: 0; border-bottom: 1px solid var(--pmme-line); scroll-margin-block: 8px; }
+#pmme-root .pmme-item.pmme-selected { background: color-mix(in srgb, var(--pmme-accent) 5%, transparent); }
+#pmme-root .pmme-item-top { display: flex; align-items: center; gap: 2px; min-height: 72px; padding-block: 7px; }
+#pmme-root .pmme-item-main { flex: 1; min-width: 0; display: grid; gap: 2px; align-content: center; text-align: left; min-height: 48px; padding: 5px 7px; }
+#pmme-root .pmme-item-title { font-size: 15px; font-weight: 550; overflow-wrap: anywhere; }
+#pmme-root .pmme-item-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 11px; color: var(--pmme-muted); }
+#pmme-root .pmme-item-actions { display: flex; align-items: center; gap: 0; flex: 0 0 auto; }
+#pmme-root .pmme-toggle { width: 44px; height: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex: 0 0 44px; }
+#pmme-root .pmme-switch-track { position: relative; display: block; width: 28px; height: 16px; border: 1px solid var(--pmme-line); border-radius: 16px; background: color-mix(in srgb, var(--pmme-line) 60%, var(--pmme-surface)); }
+#pmme-root .pmme-switch-track::before { content: ""; position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; border-radius: 50%; background: var(--pmme-switch-knob); }
+#pmme-root .pmme-toggle[aria-checked="true"] .pmme-switch-track { border-color: var(--pmme-accent); background: var(--pmme-accent); }
+#pmme-root .pmme-toggle[aria-checked="true"] .pmme-switch-track::before { transform: translateX(12px); background: var(--pmme-on-accent); }
+#pmme-root .pmme-drag-handle { touch-action: none; cursor: grab; color: var(--pmme-muted); }
+#pmme-root .pmme-drag-placeholder { opacity: .22; border-bottom-style: dashed; }
+#pmme-root .pmme-drag-ghost { background: var(--pmme-surface); color: var(--pmme-ink); box-shadow: 0 9px 30px var(--pmme-shadow); border: 1px solid var(--pmme-accent); border-radius: 12px; padding-inline: 8px; opacity: .96; }
+#pmme-root .pmme-editor { display: flex; flex-direction: column; min-width: 0; gap: 12px; padding-block: 4px 16px; }
+#pmme-root .pmme-editor-meta { display: flex; align-items: flex-end; gap: 10px; min-width: 0; }
+#pmme-root .pmme-field { display: grid; gap: 5px; min-width: 0; }
+#pmme-root .pmme-field > span { font-size: 12px; color: var(--pmme-muted); }
+#pmme-root .pmme-role-field { width: 105px; flex: 0 0 auto; }
+#pmme-root input[type="text"], #pmme-root input[type="search"], #pmme-root input[type="number"], #pmme-root select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; background: var(--pmme-field); color: var(--pmme-ink); border: 1px solid var(--pmme-line); border-radius: 8px; font-size: 16px; }
+#pmme-root .pmme-body-field { display: flex; flex-direction: column; gap: 7px; min-height: 0; }
+#pmme-root .pmme-body-field > label { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 12px; color: var(--pmme-muted); }
+#pmme-root #pmme-chars { font-size: 11px; font-variant-numeric: tabular-nums; }
+#pmme-root textarea { width: 100%; min-width: 0; height: 170px; padding: 12px; font-size: 16px; line-height: 1.8; background: var(--pmme-field); color: var(--pmme-ink); border: 1px solid var(--pmme-line); border-radius: 10px; resize: none; }
+#pmme-root input::placeholder, #pmme-root textarea::placeholder { color: var(--pmme-muted); opacity: .8; }
+/* Host themes force input backgrounds with !important. Protect only our own palettes. */
+#pmme-root:is([data-pmme-theme="paper"], [data-pmme-theme="night"]) :is(input[type="text"], input[type="search"], input[type="number"], select, textarea) {
+    background: var(--pmme-field) !important;
+    color: var(--pmme-ink) !important;
+    -webkit-text-fill-color: var(--pmme-ink) !important;
+    caret-color: var(--pmme-ink) !important;
+    border-color: var(--pmme-line) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+}
+#pmme-root:is([data-pmme-theme="paper"], [data-pmme-theme="night"]) :is(input[type="text"], input[type="search"], input[type="number"], select, textarea):focus {
+    border-color: var(--pmme-accent) !important;
+}
+#pmme-root:is([data-pmme-theme="paper"], [data-pmme-theme="night"]) :is(input, textarea)::placeholder {
+    color: var(--pmme-muted) !important;
+    -webkit-text-fill-color: var(--pmme-muted) !important;
+}
+#pmme-root:is([data-pmme-theme="paper"], [data-pmme-theme="night"]) :is(input[type="text"], input[type="search"], input[type="number"], select, textarea):disabled {
+    opacity: .65;
+}
+#pmme-root .pmme-advanced { border-top: 1px solid var(--pmme-line); }
+#pmme-root .pmme-advanced summary { min-height: 42px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: var(--pmme-muted); font-size: 12px; list-style: none; }
+#pmme-root .pmme-advanced summary::-webkit-details-marker { display: none; }
+#pmme-root .pmme-advanced summary svg { width: 15px; height: 15px; }
+#pmme-root .pmme-advanced[open] summary svg { transform: rotate(180deg); }
+#pmme-root .pmme-advanced-fields { display: grid; gap: 12px; padding-block: 3px 12px; }
+#pmme-root .pmme-check { display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 13px; color: var(--pmme-muted); }
+#pmme-root .pmme-check input, #pmme-root .pmme-triggers input { accent-color: var(--pmme-accent); width: 18px; height: 18px; margin: 0; flex: 0 0 auto; }
+#pmme-root .pmme-triggers { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+#pmme-root .pmme-triggers label { display: flex; align-items: center; gap: 6px; min-height: 36px; font-size: 12px; }
+#pmme-root .pmme-small { font-size: 12px; color: var(--pmme-muted); }
+#pmme-root .pmme-editor-footer { display: flex; gap: 8px; align-items: center; }
+#pmme-root .pmme-source { border: 1px dashed var(--pmme-line); padding: 16px; border-radius: 10px; color: var(--pmme-muted); font-size: 13px; line-height: 1.8; }
+#pmme-root .pmme-footnote { padding-block: 16px 22px; font-size: 12px; color: var(--pmme-muted); }
+#pmme-root .pmme-full-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 59px; flex: 0 0 auto; border-bottom: 1px solid var(--pmme-line); }
+#pmme-root .pmme-full-heading { display: grid; gap: 2px; min-width: 0; flex: 1; text-align: center; }
+#pmme-root .pmme-full-actions { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+#pmme-root #pmme-full-title { font-size: 14px; overflow-wrap: anywhere; }
+#pmme-root #pmme-full-status { font-size: 11px; color: var(--pmme-muted); }
+#pmme-root .pmme-full-header .pmme-quiet { padding-inline: 0; }
+#pmme-root .pmme-full-context { font-size: 11px; color: var(--pmme-muted); padding-block: 8px 2px; flex: 0 0 auto; overflow-wrap: anywhere; }
+#pmme-root .pmme-full-slot { flex: 1; min-height: 0; display: flex; }
+#pmme-root.pmme-full .pmme-editor { flex: 1; min-height: 0; padding-block: 12px 10px; }
+#pmme-root.pmme-full .pmme-body-field { flex: 1; min-height: 90px; }
+#pmme-root.pmme-full textarea { flex: 1; height: 100%; min-height: 80px; }
+#pmme-root.pmme-full .pmme-editor-meta, #pmme-root.pmme-full .pmme-editor-footer, #pmme-root.pmme-full .pmme-advanced, #pmme-root.pmme-full .pmme-check { flex: 0 0 auto; }
+#pmme-root.pmme-full .pmme-advanced[open] .pmme-advanced-fields { max-height: 190px; overflow-y: auto; }
+#pmme-root .pmme-full-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 52px; padding-block: 5px; border-top: 1px solid var(--pmme-line); flex: 0 0 auto; }
+#pmme-root #pmme-position { font-size: 11px; color: var(--pmme-muted); font-variant-numeric: tabular-nums; }
+#pmme-root.pmme-typing .pmme-editor-meta, #pmme-root.pmme-typing .pmme-advanced, #pmme-root.pmme-typing .pmme-full-nav, #pmme-root.pmme-typing .pmme-full-context, #pmme-root.pmme-typing .pmme-check { display: none; }
+#pmme-root.pmme-typing .pmme-editor { padding-top: 6px; }
+#pmme-root .pmme-sheet-layer { position: absolute; inset: 0; z-index: 30000; display: flex; align-items: flex-end; justify-content: center; }
+#pmme-root .pmme-backdrop { position: absolute; inset: 0; background: var(--pmme-backdrop); }
+#pmme-root .pmme-sheet { position: relative; width: 100%; max-width: 680px; max-height: 85%; overflow-y: auto; padding-top: 9px; padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); border: 1px solid var(--pmme-line); border-bottom: 0; border-radius: 20px 20px 0 0; background: var(--pmme-surface); box-shadow: 0 -8px 35px var(--pmme-shadow); }
+#pmme-root[data-pmme-theme="tavern"] .pmme-sheet { backdrop-filter: blur(20px); }
+#pmme-root .pmme-sheet-handle { width: 36px; height: 4px; margin-inline: auto; background: var(--pmme-line); border-radius: 8px; }
+#pmme-root .pmme-sheet header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-block: 12px 8px; }
+#pmme-root .pmme-sheet header h3 { font-size: 17px; }
+#pmme-root #pmme-sheet-body { display: grid; gap: 8px; }
+#pmme-root #pmme-sheet-body p { font-size: 13px; line-height: 1.75; color: var(--pmme-muted); }
+#pmme-root #pmme-sheet-body > .pmme-button { width: 100%; }
+#pmme-root .pmme-theme-option { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 72px; padding: 13px 14px; border: 1px solid var(--pmme-line); border-radius: 10px; text-align: left; }
+#pmme-root .pmme-theme-option[aria-pressed="true"] { background: color-mix(in srgb, var(--pmme-accent) 8%, transparent); border-color: var(--pmme-accent); }
+#pmme-root .pmme-theme-copy { display: grid; gap: 4px; min-width: 0; }
+#pmme-root .pmme-theme-copy strong { font-size: 14px; font-weight: 600; }
+#pmme-root .pmme-theme-copy small { font-size: 12px; color: var(--pmme-muted); line-height: 1.6; }
+#pmme-root .pmme-current-theme { flex: 0 0 auto; font-size: 12px; color: var(--pmme-accent); }
+#pmme-root .pmme-sheet-action { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 7px; text-align: left; border-bottom: 1px solid var(--pmme-line); font-size: 14px; }
+#pmme-root .pmme-sheet-action span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#pmme-root .pmme-library-row { display: flex; align-items: center; gap: 12px; padding-block: 12px; border-bottom: 1px solid var(--pmme-line); }
+#pmme-root .pmme-library-row > div { flex: 1; min-width: 0; display: grid; gap: 3px; }
+#pmme-root .pmme-library-row strong { font-size: 14px; font-weight: 550; overflow-wrap: anywhere; }
+#pmme-root .pmme-library-row p { overflow-wrap: anywhere; }
+#pmme-root .pmme-toast { position: absolute; z-index: 40000; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); margin-inline: auto; width: fit-content; max-width: calc(100% - 32px); background: var(--pmme-ink); color: var(--pmme-ground); padding: 11px 16px; border-radius: 12px; font-size: 13px; box-shadow: 0 4px 24px var(--pmme-shadow); text-align: center; pointer-events: none; }
+#pmme-root .pmme-toast.pmme-error { border: 2px solid var(--pmme-danger); }
+#pmme-open.pmme-entry-button { display: inline-flex; gap: 6px; align-items: center; justify-content: center; width: max-content; min-height: 36px; padding: 5px 10px; flex: 0 0 auto; white-space: nowrap; word-break: keep-all; font-size: 13px; filter: none; }
+#pmme-open[hidden] { display: none !important; }
+#pmme-open > span { white-space: nowrap; word-break: keep-all; }
+#pmme-open .pmme-icon { width: 16px; height: 16px; }
+#completion_prompt_manager .completion_prompt_manager_header:has(#pmme-open) { flex-wrap: wrap; align-items: center; gap: 6px; }
+#pmme-settings .checkbox_label { min-height: 36px; }
+#pmme-settings .pmme-setting-help { font-size: 12px; opacity: .75; line-height: 1.7; padding-block: 6px; }
+#pmme-settings .pmme-setting-theme { display: grid; gap: 6px; padding-block: 8px; }
+#pmme-settings #pmme-setting-open { width: max-content; white-space: nowrap; }
+@media (max-width: 420px) { #pmme-root .pmme-mode-label { display: none; } }
+@media (max-width: 350px) { #pmme-root .pmme-button { padding-inline: 9px; font-size: 13px; } #pmme-root .pmme-return-button { padding-inline: 0; } #pmme-root .pmme-full-header { gap: 6px; } #pmme-root .pmme-topbar { gap: 8px; } #pmme-root .pmme-topbar h2 { font-size: 18px; gap: 6px; letter-spacing: .02em; } }
+@media (prefers-reduced-motion: no-preference) { #pmme-root button { transition: background .15s ease, color .15s ease; } #pmme-root .pmme-switch-track { transition: background .15s ease, border-color .15s ease; } #pmme-root .pmme-switch-track::before { transition: transform .15s ease; } }

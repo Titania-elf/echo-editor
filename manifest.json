@@ -1,0 +1,12 @@
+{
+    "display_name": "回声编辑台",
+    "loading_order": 120,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Titania-elf",
+    "version": "0.1.6",
+    "homePage": "https://github.com/Titania-elf/echo-editor",
+    "auto_update": false
+}
