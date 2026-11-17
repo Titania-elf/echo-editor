@@ -67,3 +67,18 @@ export function projectOrder(order, visibleIds) {
     if (projection.length !== order.length) throw new Error('排列在拖动期间发生变化，请重新拖动。');
     return projection.map(id => native.get(id));
 }
+
+// Preflight the entire batch before changing any enabled flags.
+export function planEnabledChange(order, ids, enabled, canToggle = () => true) {
+    if (typeof enabled !== 'boolean') throw new Error('启停目标必须是明确的开关状态。');
+    const entries = new Map(order.map(entry => [entry.identifier, entry]));
+    if (entries.size !== order.length || new Set(ids).size !== ids.length) throw new Error('条目标识重复，已取消批量启停。');
+    const changes = [], skipped = [];
+    for (const id of ids) {
+        const entry = entries.get(id);
+        if (!entry) throw new Error('分组中的条目已移出排列，请重新检查分组。');
+        if (!canToggle(id)) skipped.push(id);
+        else if (Boolean(entry.enabled) !== enabled) changes.push({ entry, enabled });
+    }
+    return { changes, skipped };
+}

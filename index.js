@@ -4,6 +4,8 @@ import * as native from './adapter.js';
 import { normalizePrompt, draftChanged, mergeDraftPositions, insertId, PROMPT_FIELDS, TRIGGERS, copy } from './model.js';
 import { createDragSorter } from './drag-sort.js';
 import { createSaveQueue } from './save-queue.js';
+import { parseGroupName, detectGroups, resolveGroups } from './groups.js';
+import { textMatch, searchEntries } from './search.js';
 
 const MODULE = '回声编辑台';
 const LEGACY_MODULE = 'st-preset-mobile-editor';
@@ -26,6 +28,8 @@ const iconPaths = {
     grip:'<path d="M6 7h12M6 12h12M6 17h12"/>',
     copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M15 8V4H4v11h4"/>',
     library:'<path d="M4 5h4v15H4zm7 0h4v15h-4zm7 0 3 14"/>',
+    search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
+    folder:'<path d="M3 7V5h6l2 2h10v13H3Z"/>',
     remove:'<path d="M5 12h14"/><circle cx="12" cy="12" r="9"/>',
 };
 const icon = name => `<svg class="pmme-icon" viewBox="0 0 24 24" aria-hidden="true">${iconPaths[name] || ''}</svg>`;
@@ -53,6 +57,7 @@ function config(){
     const settings=getContext().extensionSettings[MODULE] ||= {};
     for(const [key,value] of Object.entries(defaults))if(settings[key]===undefined)settings[key]=value;
     if(!THEMES.some(theme=>theme.id===settings.theme))settings.theme='paper';
+    if(!settings.groupsByScope || typeof settings.groupsByScope!=='object' || Array.isArray(settings.groupsByScope))settings.groupsByScope={};
     return settings;
 }
 const settingsSaver = createSaveQueue({
@@ -113,7 +118,8 @@ function makeRoot() {
       <div id="pmme-directory-view" class="pmme-directory-view">
         <header class="pmme-topbar pmme-gutter"><button id="pmme-close" class="pmme-button pmme-quiet pmme-return-button" aria-label="返回酒馆预设编辑" title="返回预设">${icon('back')}预设</button><h2>${icon('echo')}回声编辑台</h2><button id="pmme-theme-control" type="button" class="pmme-button pmme-theme-control" aria-label="选择界面主题"></button><span class="pmme-mode-label">预设编辑</span></header>
         <section class="pmme-preset pmme-gutter"><div><h3 id="pmme-preset-name"></h3><p id="pmme-status"></p><button id="pmme-retry" class="pmme-button pmme-quiet" hidden>重试保存</button></div><button id="pmme-update" class="pmme-button pmme-secondary">更新预设</button></section>
-        <div class="pmme-toolbar pmme-gutter"><button id="pmme-new" class="pmme-button pmme-primary pmme-grow">${icon('plus')}新建条目</button><button id="pmme-library" class="pmme-button">${icon('library')}添加已有</button><button id="pmme-organize" class="pmme-icon-button" aria-label="整理排列" title="整理排列">${icon('grip')}</button></div>
+        <div class="pmme-search-line pmme-gutter"><label class="pmme-search-control" for="pmme-directory-search">${icon('search')}<input id="pmme-directory-search" type="search" placeholder="搜索标题或正文" aria-label="搜索当前预设条目" autocomplete="off"></label><button id="pmme-clear-search" class="pmme-icon-button" aria-label="清空搜索" title="清空搜索" hidden>${icon('close')}</button></div>
+        <div class="pmme-toolbar pmme-gutter"><label class="pmme-search-scope" for="pmme-search-titles"><input id="pmme-search-titles" type="checkbox">仅标题</label><span class="pmme-grow"></span><button id="pmme-library" class="pmme-button">${icon('library')}添加已有</button><button id="pmme-groups" class="pmme-button">${icon('folder')}分组</button><button id="pmme-organize" class="pmme-icon-button" aria-label="整理排列" title="整理排列">${icon('grip')}</button></div>
         <div class="pmme-caption pmme-gutter"><span id="pmme-hint">点击条目快改，展开全屏长写</span><span id="pmme-count"></span></div>
         <div id="pmme-scroll" class="pmme-scroll pmme-gutter"><main id="pmme-list" aria-label="预设排列"></main><p class="pmme-footnote">草稿在本次页面中保留；刷新前请保存。</p></div>
       </div>
@@ -170,7 +176,11 @@ function makeWorkspace() {
     const scope=native.scopeKey();
     if(workspace?.scope===scope)return;
     if(workspace)archives.set(workspace.scope,workspace);
-    workspace=archives.get(scope) || {scope,ids:native.nativeOrder().map(e=>e.identifier),buffers:new Map(),drafts:new Map(),cursors:new Map(),selected:null,full:false,organizing:false,scrollTop:0,settingsUnconfirmed:false};
+    workspace=archives.get(scope) || {
+        scope,ids:native.nativeOrder().map(e=>e.identifier),buffers:new Map(),drafts:new Map(),cursors:new Map(),
+        selected:null,full:false,organizing:false,scrollTop:0,settingsUnconfirmed:false,query:'',titleOnly:false,searchScroll:null,
+        groupDefinitions:copy(Array.isArray(config().groupsByScope[scope])?config().groupsByScope[scope]:[]),pendingGroupStart:null,
+    };
     workspace.full=false;workspace.organizing=false;
     workspace.presetValue=document.getElementById('settings_preset_openai')?.value;
     syncWorkspace();
@@ -189,19 +199,115 @@ function setView() {
     root.classList.toggle('pmme-full',workspace.full);
     $('expand').hidden=workspace.full;$('new-after').hidden=!workspace.full;
 }
+function hasSearch() { return Boolean(workspace?.query.trim()); }
+function currentEntries() {
+    return workspace.ids.map(id=>{const values=bufferFor(id)?.values;return values?{id,name:values.name,content:values.content}:null;}).filter(Boolean);
+}
+function resolveWorkspaceGroups() {
+    workspace.groupView=resolveGroups(workspace.ids,workspace.groupDefinitions);
+    return workspace.groupView;
+}
+function storeGroupPreferences(owner=workspace) {
+    // A group's draft boundary IDs cannot survive a reload until their first save.
+    config().groupsByScope[owner.scope]=owner.groupDefinitions.filter(group=>group&&owner.ids.includes(group.startId)&&owner.ids.includes(group.endId)&&!owner.drafts.has(group.startId)&&!owner.drafts.has(group.endId)).map(group=>({
+        id:group.id,startId:group.startId,endId:group.endId,name:group.name,collapsed:Boolean(group.collapsed),
+    }));
+}
+function persistGroups() { storeGroupPreferences();settingsSaver.request(preferencesOwner); }
+function revealEntry(id,clearSearch=false) {
+    if(clearSearch){workspace.query='';workspace.searchScroll=null;}
+    let changed=false;
+    for(const group of resolveWorkspaceGroups().groups){
+        if(!group.ids.includes(id))continue;
+        const definition=workspace.groupDefinitions.find(item=>item?.id===group.id);
+        if(definition?.collapsed){definition.collapsed=false;changed=true;}
+    }
+    if(changed)persistGroups();
+}
+function setSearchQuery(value) {
+    const wasSearching=hasSearch();workspace.query=String(value);
+    if(!wasSearching&&hasSearch())workspace.searchScroll=$('scroll').scrollTop;
+    if(hasSearch())workspace.organizing=false;
+    const restore=wasSearching&&!hasSearch()?workspace.searchScroll:null;
+    if(!hasSearch())workspace.searchScroll=null;
+    renderList();
+    if(restore!==null)$('scroll').scrollTop=restore;
+}
+function highlightText(text,range) {
+    const source=String(text);
+    return range?`${escape(source.slice(0,range.start))}<mark>${escape(source.slice(range.start,range.end))}</mark>${escape(source.slice(range.end))}`:escape(source);
+}
+function snippetMarkup(snippet) {
+    return snippet?`${snippet.leading?'…':''}${escape(snippet.before)}<mark>${escape(snippet.match)}</mark>${escape(snippet.after)}${snippet.trailing?'…':''}`:'';
+}
+function renderEntry(id,boundary=null) {
+    if(hasSearch()&&!workspace.visibleIds.has(id))return '';
+    const prompt=promptFor(id),buffer=bufferFor(id),key=escape(id);
+    if(!prompt||!buffer)return `<article class="pmme-item pmme-sort-unit" data-pmme-id="${key}" data-pmme-sort-key="entry:${key}"><p class="pmme-unavailable">不可用条目 · ${key}</p></article>`;
+    const draft=workspace.drafts.has(id),allowed=draft?{toggle:false,edit:true}:native.permissions(prompt),entry=workspace.orderMap.get(id);
+    const enabled=Boolean(entry?.enabled),role=prompt.marker?'内容占位符':buffer.values.role,match=workspace.searchMatches.get(id);
+    return `<article id="pmme-row-${key}" class="pmme-item ${boundary?'pmme-boundary':'pmme-sort-unit'} ${workspace.selected===id&&!workspace.organizing?'pmme-selected':''}" data-pmme-id="${key}" ${boundary?'':`data-pmme-sort-key="entry:${key}"`}>
+      <div class="pmme-item-top">${workspace.organizing&&!boundary?`<button class="pmme-drag-handle pmme-icon-button" aria-label="拖动${escape(titleFor(id))}排序" title="按住拖动">${icon('grip')}</button>`:''}
+        <button class="pmme-item-main" data-pmme-select="${key}" aria-expanded="${workspace.selected===id&&!workspace.organizing}">
+          <span id="pmme-title-${key}" class="pmme-item-title">${highlightText(titleFor(id),match?.titleMatch)}</span>
+          <span class="pmme-item-sub">${boundary?`<span class="pmme-boundary-label">${boundary}</span>`:''}<span>${escape(role)}</span><span data-pmme-state>${draft?'草稿 · 不发送':enabled?'已启用':'已关闭'}</span><span id="pmme-dirty-${key}" class="pmme-pending" ${!draft&&draftChanged(buffer)?'':'hidden'}>有修改</span></span>
+          <span class="pmme-match-preview" ${match?.snippet?'':'hidden'}>${snippetMarkup(match?.snippet)}</span>
+        </button>
+        <div class="pmme-item-actions"><button type="button" class="pmme-toggle pmme-icon-button" role="switch" data-pmme-toggle="${key}" aria-label="${escape(titleFor(id))}的启用状态" aria-checked="${enabled&&!draft}" title="${draft?'草稿保存后才可启用':enabled?'点击关闭':'点击启用'}" ${draft||!allowed.toggle?'disabled':''}><span class="pmme-switch-track" aria-hidden="true"></span></button><button class="pmme-icon-button" data-pmme-menu="${key}" aria-label="${escape(titleFor(id))}的更多操作">${icon('more')}</button></div>
+      </div><div id="pmme-slot-${key}" class="pmme-editor-slot"></div></article>`;
+}
+function groupSummary(group) {
+    let enabled=0,toggleable=0,drafts=0,locked=0;
+    for(const id of group.ids){
+        if(workspace.drafts.has(id)){drafts++;continue;}
+        const prompt=promptFor(id),entry=workspace.orderMap.get(id);
+        if(!prompt||!entry||!native.permissions(prompt).toggle){locked++;continue;}
+        toggleable++;if(entry.enabled)enabled++;
+    }
+    return {enabled,toggleable,drafts,locked,state:enabled===0?'false':enabled===toggleable?'true':'mixed'};
+}
+function renderTree(nodes) {
+    return nodes.map(node=>{
+        if(node.type==='entry')return renderEntry(node.id);
+        const group=node.group;
+        if(hasSearch()&&!group.ids.some(id=>workspace.visibleIds.has(id)))return '';
+        const key=escape(group.id),open=hasSearch()||!group.collapsed;
+        return `<section class="pmme-group pmme-sort-unit" data-pmme-group="${key}" data-pmme-sort-key="group:${key}">
+          <div class="pmme-group-header">${workspace.organizing?`<button class="pmme-drag-handle pmme-icon-button" aria-label="拖动整个${escape(group.name)}分组" title="整组拖动，包含首尾边界">${icon('grip')}</button>`:''}
+            <button class="pmme-group-main" data-pmme-fold="${key}" aria-expanded="${open}" aria-controls="pmme-group-body-${key}">${icon('chevron')}<span class="pmme-group-copy"><strong>${highlightText(group.name,hasSearch()?textMatch(group.name,workspace.query):null)}</strong><span class="pmme-group-summary" data-pmme-group-summary="${key}"></span></span></button>
+            <div class="pmme-item-actions"><button type="button" class="pmme-toggle pmme-icon-button" role="checkbox" data-pmme-group-toggle="${key}" aria-label="${escape(group.name)}分组的批量启停（含边界）"><span class="pmme-switch-track" aria-hidden="true"></span></button><button class="pmme-icon-button" data-pmme-group-menu="${key}" aria-label="${escape(group.name)}分组的更多操作">${icon('more')}</button></div>
+          </div><div id="pmme-group-body-${key}" class="pmme-group-body" ${open?'':'hidden'}>
+            ${renderEntry(group.startId,'开始边界')}<div class="pmme-group-members" data-pmme-sort-container data-pmme-sort-parent="${key}">${renderTree(node.children)}${workspace.organizing&&!node.children.length?'<p class="pmme-group-empty">拖动条目到组内</p>':''}</div>${renderEntry(group.endId,'结束边界')}
+          </div></section>`;
+    }).join('');
+}
+function paintGroupStates() {
+    if(!workspace.groupView)return;
+    workspace.orderMap=new Map(native.nativeOrder().map(entry=>[entry.identifier,entry]));
+    for(const group of workspace.groupView.groups){
+        const section=[...$('list').querySelectorAll('[data-pmme-group]')].find(element=>element.dataset.pmmeGroup===group.id);
+        if(!section)continue;
+        const state=groupSummary(group),summary=section.querySelector('[data-pmme-group-summary]'),button=section.querySelector('[data-pmme-group-toggle]');
+        summary.textContent=`${group.ids.length} 条（含边界） · 已启用 ${state.enabled}/${state.toggleable}${state.drafts?` · 草稿 ${state.drafts}`:''}${state.locked?` · 受限 ${state.locked}`:''}`;
+        button.setAttribute('aria-checked',state.state);button.disabled=busy||!state.toggleable;
+        button.title=`${state.state==='true'?'全部关闭':'全部启用'}（含首尾边界；跳过草稿和受限项）`;
+    }
+}
 function renderList() {
     if(!workspace)return;
     const focus=$('editor').contains(document.activeElement)?document.activeElement.id:null,scroll=$('scroll').scrollTop;
     rememberCursor();sorter?.cancel();$('parking').appendChild($('editor'));syncWorkspace();setView();
-    $('list').innerHTML=workspace.ids.map(id=>{
-        const prompt=promptFor(id),buffer=bufferFor(id);if(!prompt||!buffer)return '';
-        const draft=workspace.drafts.has(id),allowed=draft?{toggle:false,edit:true}:native.permissions(prompt),entry=native.nativeOrder().find(item=>item.identifier===id);
-        const enabled=Boolean(entry?.enabled),role=prompt.marker?'内容占位符':buffer.values.role;
-        return `<article id="pmme-row-${escape(id)}" class="pmme-item ${workspace.selected===id&&!workspace.organizing?'pmme-selected':''}" data-pmme-id="${escape(id)}"><div class="pmme-item-top">${workspace.organizing?`<button class="pmme-drag-handle pmme-icon-button" aria-label="拖动${escape(titleFor(id))}排序" title="按住拖动">${icon('grip')}</button>`:''}<button class="pmme-item-main" data-pmme-select="${escape(id)}" aria-expanded="${workspace.selected===id&&!workspace.organizing}"><span id="pmme-title-${escape(id)}" class="pmme-item-title">${escape(titleFor(id))}</span><span class="pmme-item-sub"><span>${escape(role)}</span><span data-pmme-state>${draft?'草稿 · 不发送':enabled?'已启用':'已关闭'}</span><span id="pmme-dirty-${escape(id)}" class="pmme-pending" ${!draft&&draftChanged(buffer)?'':'hidden'}>有修改</span></span></button><div class="pmme-item-actions"><button type="button" class="pmme-toggle pmme-icon-button" role="switch" data-pmme-toggle="${escape(id)}" aria-label="${escape(titleFor(id))}的启用状态" aria-checked="${enabled&&!draft}" title="${draft?'草稿保存后才可启用':enabled?'点击关闭':'点击启用'}" ${draft||!allowed.toggle?'disabled':''}><span class="pmme-switch-track" aria-hidden="true"></span></button><button class="pmme-icon-button" data-pmme-menu="${escape(id)}" aria-label="${escape(titleFor(id))}的更多操作">${icon('more')}</button></div></div><div id="pmme-slot-${escape(id)}" class="pmme-editor-slot"></div></article>`;
-    }).join('');
-    if(workspace.selected&&!workspace.organizing){(workspace.full?$('full-slot'):$(`slot-${workspace.selected}`))?.appendChild($('editor'));loadEditor();}
+    const view=resolveWorkspaceGroups();workspace.orderMap=new Map(native.nativeOrder().map(entry=>[entry.identifier,entry]));
+    workspace.searchMatches=searchEntries(currentEntries(),workspace.query,{titleOnly:workspace.titleOnly});
+    workspace.visibleIds=new Set(workspace.searchMatches.keys());
+    if(hasSearch())for(const group of view.groups)if(textMatch(group.name,workspace.query))for(const id of group.ids)workspace.visibleIds.add(id);
+    $('directory-search').value=workspace.query;$('directory-search').placeholder=workspace.titleOnly?'搜索条目标题':'搜索标题或正文';$('search-titles').checked=workspace.titleOnly;$('clear-search').hidden=!workspace.query;
+    $('list').innerHTML=renderTree(view.tree);
+    if(!workspace.ids.length)$('list').innerHTML='<div class="pmme-empty"><p>当前排列还没有条目</p><button class="pmme-button pmme-primary" data-pmme-create-first>创建第一个条目</button></div>';
+    else if(hasSearch()&&!workspace.visibleIds.size)$('list').innerHTML='<div class="pmme-empty"><p>没有匹配条目，试试其他关键词</p><button class="pmme-button" data-pmme-clear-query>清空搜索</button></div>';
+    if(workspace.selected&&!workspace.organizing){const slot=workspace.full?$('full-slot'):$(`slot-${workspace.selected}`);if(slot){slot.appendChild($('editor'));loadEditor();}}
     $('scroll').scrollTop=scroll;
-    if(focus&&!workspace.organizing&&document.getElementById(focus)?.isConnected)document.getElementById(focus).focus({preventScroll:true});
+    if(focus&&!workspace.organizing&&$('editor').getClientRects().length)document.getElementById(focus)?.focus({preventScroll:true});
     paintStatus();paintBusy();
 }
 function loadEditor() {
@@ -223,18 +329,20 @@ function paintStatus() {
     if(!workspace)return;
     $('preset-name').textContent=native.presetName()||'当前配置';
     const pending=pendingIds().length;
-    $('status').textContent=busy?'正在更新预设…':workspace.settingsSaveFailed?'后台保存失败，修改仍保留':preferencesError?'主题偏好未确认保存，请重试':pending?`${pending} 个条目有草稿或修改`:workspace.backgroundSaving?'当前配置 · 命名预设待更新':workspace.settingsUnconfirmed?'当前设置尚未确认保存，请重试':native.presetNeedsUpdate()?'条目已保存 · 命名预设待更新':'当前条目与命名预设一致';
+    $('status').textContent=busy?'正在更新预设…':workspace.settingsSaveFailed?'后台保存失败，修改仍保留':preferencesError?'界面偏好未确认保存，请重试':pending?`${pending} 个条目有草稿或修改`:workspace.backgroundSaving?'当前配置 · 命名预设待更新':workspace.settingsUnconfirmed?'当前设置尚未确认保存，请重试':native.presetNeedsUpdate()?'条目已保存 · 命名预设待更新':'当前条目与命名预设一致';
     $('retry').hidden=!(workspace.settingsSaveFailed||preferencesError)||busy;
     $('status').classList.toggle('pmme-pending',Boolean(pending||workspace.settingsUnconfirmed||preferencesError||native.presetNeedsUpdate()));
-    $('hint').textContent=workspace.dragging?'拖到目标位置后松手':workspace.organizing?'按住把手拖动；松手后保存排列':'点击条目快改，展开全屏长写';
-    $('count').textContent=`${workspace.ids.length} 个条目`;$('organize').innerHTML=icon(workspace.organizing?'check':'grip');$('organize').setAttribute('aria-label',workspace.organizing?'完成整理':'整理排列');
-    for(const id of workspace.ids){const buffer=bufferFor(id);if(!buffer)continue;const title=$(`title-${id}`),badge=$(`dirty-${id}`);if(title)title.textContent=buffer.values.name||'未命名条目';if(badge)badge.hidden=workspace.drafts.has(id)||!draftChanged(buffer);}
+    $('hint').textContent=workspace.dragging?workspace.dragTarget||'拖到目标位置后松手':workspace.pendingGroupStart?`选择结束边界：${titleFor(workspace.pendingGroupStart)}`:workspace.organizing?'拖动组或条目；展开组可拖入、拖出':hasSearch()?'搜索包含草稿和已关闭条目':'点击条目快改，展开全屏长写';
+    $('count').textContent=hasSearch()?`找到 ${workspace.visibleIds?.size||0} / ${workspace.ids.length} 条`:`${workspace.ids.length} 条${workspace.groupView?.groups.length?` · ${workspace.groupView.groups.length} 组`:''}`;
+    $('organize').innerHTML=icon(workspace.organizing?'check':'grip');$('organize').setAttribute('aria-label',workspace.organizing?'完成整理':hasSearch()?'清空搜索并整理排列':'整理排列');$('organize').title=workspace.organizing?'完成整理':hasSearch()?'清空搜索并整理排列':'整理排列';
+    for(const id of workspace.ids){const buffer=bufferFor(id);if(!buffer)continue;const title=$(`title-${id}`),badge=$(`dirty-${id}`);if(title)title.innerHTML=highlightText(buffer.values.name||'未命名条目',hasSearch()?textMatch(buffer.values.name,workspace.query):null);if(badge)badge.hidden=workspace.drafts.has(id)||!draftChanged(buffer);}
+    paintGroupStates();
     if(!workspace.selected)return;
     const id=workspace.selected,buffer=bufferFor(id),index=workspace.ids.indexOf(id);if(!buffer)return;
-    $('chars').textContent=`${Array.from(buffer.values.content).length} 字`;$('discard').disabled=!hasDraft(id);
+    $('chars').textContent=`${Array.from(buffer.values.content).length} 字`;$('discard').disabled=busy||!hasDraft(id);
     $('full-title').textContent=titleFor(id);$('full-status').textContent=workspace.drafts.has(id)?'草稿 · 尚未加入发送':draftChanged(buffer)?'修改未保存':workspace.settingsUnconfirmed?'修改已应用':'条目已保存';
     $('full-context').textContent=index?`位于「${titleFor(workspace.ids[index-1])}」之后`:'位于预设开头';$('position').textContent=`${index+1} / ${workspace.ids.length}`;
-    $('previous').disabled=index===0;$('next').disabled=index===workspace.ids.length-1;
+    $('previous').disabled=busy||index===0;$('next').disabled=busy||index===workspace.ids.length-1;
 }
 function paintBusy(){if(!busy)return;for(const control of root.querySelectorAll('button,input,select,textarea')){if(!disabledControls.has(control))disabledControls.set(control,control.disabled);control.disabled=true;}}
 function setBusy(value){busy=value;root.classList.toggle('pmme-busy',value);if(value)paintBusy();else{for(const [control,disabled]of disabledControls)if(control.isConnected)control.disabled=disabled;disabledControls.clear();}paintStatus();}
@@ -246,7 +354,7 @@ async function operation(action){
     catch(error){notify(error.message,true);console.warn('[回声编辑台]',error);if(error.code==='PROMPT_CONFLICT')showConflict();return false;}
     finally{busy=false;root.classList.remove('pmme-busy');for(const[control,disabled]of disabledControls)if(control.isConnected)control.disabled=disabled;disabledControls.clear();if(workspace&&!root.hidden){renderList();paintStatus();}native.refreshNative();}
 }
-function markApplied(ids){for(const id of ids){workspace.drafts.delete(id);const prompt=native.findPrompt(id);if(prompt){const base=normalizePrompt(prompt);workspace.buffers.set(id,{base,values:copy(base)});}}}
+function markApplied(ids){for(const id of ids){workspace.drafts.delete(id);const prompt=native.findPrompt(id);if(prompt){const base=normalizePrompt(prompt);workspace.buffers.set(id,{base,values:copy(base)});}}storeGroupPreferences();}
 function validateEditor(){for(const control of[$('depth'),$('order')])if(!control.hidden&&control.offsetParent&&!control.checkValidity()){control.reportValidity();return false;}return true;}
 function applyIds(ids){
     syncWorkspace();const owner=workspace;
@@ -275,21 +383,104 @@ async function updateNamed(includeDrafts=true){
     return success;
 }
 function showConflict(){if(!workspace.selected)return;showSheet('条目发生编辑冲突','<p>其他编辑器改动了同一个字段。当前草稿保留，你可以继续检查，或明确载入最新的原生内容。</p><button class="pmme-button" data-pmme-action="reload-latest">放弃本条草稿，载入最新内容</button><button class="pmme-button pmme-quiet" data-pmme-action="close">保留草稿继续查看</button>');}
-function select(id,toggle=false){if(busy||workspace.organizing)return;rememberCursor();workspace.selected=toggle&&workspace.selected===id&&!workspace.full?null:id;renderList();}
+function select(id,toggle=false){if(busy||workspace.organizing)return;rememberCursor();workspace.selected=toggle&&workspace.selected===id&&!workspace.full?null:id;if(workspace.selected)revealEntry(id);renderList();}
 function createDraft(anchor,before=false,source=null){
     if(busy)return;
     rememberCursor();const id=native.newId(),values=source?copy(source):normalizePrompt({name:'',role:'system',content:''});
     if(source)values.name=`${values.name||'未命名条目'}（副本）`;
     const prompt={identifier:id,...values,system_prompt:false,marker:false,enabled:false};
     workspace.drafts.set(id,{prompt,enableOnSave:config().enableNewOnSave});workspace.buffers.set(id,{base:normalizePrompt({}),values:copy(values)});workspace.ids=insertId(workspace.ids,id,anchor,before);workspace.selected=id;workspace.organizing=false;
-    renderList();if(!workspace.full)$(`row-${id}`).scrollIntoView({block:'nearest',behavior:'smooth'});$('name').focus({preventScroll:true});$('name').select();notify('草稿已占据位置，首次保存会自动加入排列。');
+    revealEntry(id,true);renderList();if(!workspace.full)$(`row-${id}`)?.scrollIntoView({block:'nearest',behavior:'smooth'});$('name').focus({preventScroll:true});$('name').select();notify('草稿已占据位置，首次保存会自动加入排列。');
 }
 function expand(){if(!workspace.selected||busy)return;rememberCursor();workspace.scrollTop=$('scroll').scrollTop;workspace.full=true;setView();$('full-slot').appendChild($('editor'));restoreCursor();paintStatus();updateViewport();$('collapse').focus({preventScroll:true});}
-function collapse(){if(busy)return;rememberCursor();workspace.full=false;root.classList.remove('pmme-typing');renderList();$('scroll').scrollTop=workspace.scrollTop;$('expand').focus({preventScroll:true});}
-function organize(){if(busy)return;rememberCursor();if(workspace.full){workspace.full=false;setView();}workspace.organizing=!workspace.organizing;renderList();}
+function collapse(){if(busy)return;rememberCursor();workspace.full=false;root.classList.remove('pmme-typing');revealEntry(workspace.selected,true);renderList();$('scroll').scrollTop=workspace.scrollTop;$('expand').focus({preventScroll:true});}
+function organize(){if(busy)return;rememberCursor();if(workspace.full){workspace.full=false;setView();}workspace.organizing=!workspace.organizing;if(workspace.organizing){workspace.query='';workspace.searchScroll=null;}else if(workspace.selected)revealEntry(workspace.selected);renderList();}
+function groupById(id) { return resolveWorkspaceGroups().groups.find(group=>group.id===id); }
+function foldGroup(id) {
+    if(hasSearch()){notify('搜索时临时展开匹配分组；清空搜索后恢复折叠状态。');return;}
+    const definition=workspace.groupDefinitions.find(group=>group?.id===id);
+    if(!definition)return;
+    definition.collapsed=!definition.collapsed;persistGroups();renderList();
+    [...$('list').querySelectorAll('[data-pmme-fold]')].find(button=>button.dataset.pmmeFold===id)?.focus({preventScroll:true});
+}
+function foldAllGroups(collapsed) {
+    for(const group of workspace.groupDefinitions)if(group&&typeof group==='object')group.collapsed=collapsed;
+    persistGroups();closeSheet(false);renderList();
+    if(hasSearch())notify('已记住折叠状态；搜索结果仍临时展开。');
+}
+function showGroupTools() {
+    syncWorkspace();const view=resolveWorkspaceGroups();
+    showSheet('目录分组',`<p>整组拖动和批量启停包含首尾边界。分组记录只保存在插件偏好中，不改写条目名称或正文。</p>
+      ${view.invalid.length?`<p class="pmme-group-warning">${view.invalid.length} 个分组边界失效或交叉，相关条目已平铺显示。可重新识别或取消分组。</p>`:''}
+      ${action('识别配对名称并预览','search','groups-detect')}
+      ${view.groups.length?`${action('全部展开','expand','groups-expand')}${action('全部收起','folder','groups-collapse')}`:''}
+      ${workspace.pendingGroupStart?`${action('取消当前首尾边界选择','close','group-mark-cancel')}`:''}
+      ${workspace.groupDefinitions.length?`${action('取消全部分组，保留所有条目','remove','groups-clear','pmme-danger')}`:''}
+      <p>遇到重名或特殊装饰时，也可以从条目菜单手动指定分组起点和终点。</p>`);
+}
+function groupingSignature() { return JSON.stringify([workspace.ids,currentEntries().map(entry=>[entry.id,entry.name])]); }
+function previewGroups() {
+    syncWorkspace();const entries=currentEntries(),result=detectGroups(entries);
+    workspace.groupPreview={scope:workspace.scope,signature:groupingSignature(),groups:result.groups};
+    const indices=new Map(workspace.ids.map((id,index)=>[id,index]));
+    showSheet('识别分组预览',`<p>应用后会替换当前目录分组；不会修改条目内容、开关或排列。默认勾选识别到的配对，可取消不需要的组。</p>
+      ${result.groups.map((group,index)=>`<label class="pmme-group-candidate"><input type="checkbox" data-pmme-candidate="${index}" checked><span><strong>${escape(group.name)}</strong><small>${indices.get(group.endId)-indices.get(group.startId)+1} 条（含边界） · ${escape(titleFor(group.startId))} → ${escape(titleFor(group.endId))}</small></span></label>`).join('')}
+      ${!result.groups.length?'<p>未找到可确认的配对。可在条目菜单手动指定首尾边界。</p>':''}
+      ${result.issues.length?`<div class="pmme-group-warning"><p>以下名称需要检查，未自动配对：</p><ul>${result.issues.map(issue=>`<li>${escape(issue.name||'未命名')}：${escape(issue.message)}</li>`).join('')}</ul></div>`:''}
+      ${result.groups.length?'<button class="pmme-button pmme-primary" data-pmme-action="groups-apply">应用所选分组</button>':''}
+      <button class="pmme-button" data-pmme-action="groups-tools">返回分组管理</button>`);
+}
+function applyPreviewGroups() {
+    const preview=workspace.groupPreview;if(!preview)return;
+    syncWorkspace();native.assertScope(preview.scope);
+    if(preview.scope!==workspace.scope||preview.signature!==groupingSignature()){notify('排列或名称已变化，请重新识别分组。',true);previewGroups();return;}
+    const selected=[...$('sheet-body').querySelectorAll('[data-pmme-candidate]:checked')].map(input=>preview.groups[Number(input.dataset.pmmeCandidate)]).filter(Boolean);
+    const previous=new Map(workspace.groupDefinitions.filter(group=>group&&typeof group==='object').map(group=>[JSON.stringify([group.startId,group.endId]),group]));
+    workspace.groupDefinitions=selected.map(group=>({...group,collapsed:previous.get(JSON.stringify([group.startId,group.endId]))?.collapsed??true}));
+    workspace.pendingGroupStart=null;workspace.groupPreview=null;closeSheet(false);
+    if(workspace.selected)revealEntry(workspace.selected);
+    persistGroups();renderList();notify(`已应用 ${selected.length} 个分组，条目内容和排列未改变。`);
+}
+function groupMenu(id) {
+    syncWorkspace();const group=groupById(id);if(!group){notify('分组边界已变化，请重新识别。',true);return;}
+    showSheet(group.name,`<div data-pmme-group-action="${escape(id)}">
+      ${action('组内新增','plus','group-new')}${action('在组上方新增','plus','group-before')}${action('在组下方新增','plus','group-after')}
+      ${action('全部启用（含首尾边界）','check','group-enable')}${action('全部关闭（含首尾边界）','remove','group-disable')}
+      ${action('整理分组与条目','grip','organize')}${action('查看开始边界','pen','group-start')}${action('查看结束边界','pen','group-end')}
+      ${action('取消这个分组，保留所有条目','remove','group-remove')}
+      </div><p>批量启停跳过未保存草稿和原生禁止切换的条目；启用会把所有可切换成员设为开启，不恢复之前的个别开关组合。</p>`);
+}
+function setGroupEnabled(id,enabled=null) {
+    try{
+        syncWorkspace();const group=groupById(id);if(!group)throw new Error('分组边界已变化，请重新识别。');
+        workspace.orderMap=new Map(native.nativeOrder().map(entry=>[entry.identifier,entry]));
+        const state=groupSummary(group),target=enabled===null?state.state!=='true':enabled;
+        const drafts=group.ids.filter(item=>workspace.drafts.has(item));
+        const result=native.setPromptsEnabled(workspace.scope,group.ids.filter(item=>!workspace.drafts.has(item)),target);
+        if(result.changed.length){settingsSaver.request(workspace);native.refreshNative();}
+        const skipped=[drafts.length?`${drafts.length} 个草稿`:'',result.skipped.length?`${result.skipped.length} 个受限条目`:''].filter(Boolean);
+        paintStatus();
+        for(const item of result.changed)paintToggle(item,target);
+        notify(`${result.changed.length?`已${target?'启用':'关闭'} ${result.changed.length} 条`:'可切换条目已是目标状态'}${skipped.length?`；跳过 ${skipped.join('、')}`:''}。`);
+    }catch(error){notify(error.message,true);}
+}
+function markGroupStart(id) {
+    workspace.pendingGroupStart=id;closeSheet(false);paintStatus();notify('已选择开始边界，请在结束条目的菜单选择“在此结束分组”。');
+}
+function markGroupEnd(id) {
+    syncWorkspace();const startId=workspace.pendingGroupStart;
+    if(!startId||!workspace.ids.includes(startId)){workspace.pendingGroupStart=null;throw new Error('开始边界已失效，请重新选择。');}
+    const group={id:startId,startId,endId:id,name:parseGroupName(titleFor(startId))?.name||titleFor(startId),collapsed:true};
+    const next=[...workspace.groupDefinitions,group],view=resolveGroups(workspace.ids,next);
+    if(!view.groups.some(item=>item.id===group.id&&item.startId===startId&&item.endId===id)||view.invalid.some(item=>item.group===group||item.group?.id===group.id))throw new Error('边界顺序错误、已被使用或与其他组交叉。请先取消冲突分组，再选择边界。');
+    workspace.groupDefinitions=next;workspace.pendingGroupStart=null;closeSheet(false);if(workspace.selected)revealEntry(workspace.selected);persistGroups();renderList();notify('已建立分组，首尾条目保持原样。');
+}
 function entryMenu(id){
     const prompt=promptFor(id);if(!prompt)return;const draft=workspace.drafts.has(id),allowed=draft?{remove:true,content:true}:native.permissions(prompt);
-    showSheet(titleFor(id),`<div data-pmme-entry="${escape(id)}">${action('在上方新增','plus','before')}${action('在下方新增','plus','after')}${allowed.content?action('复制为独立草稿','copy','duplicate'):''}${action('整理条目顺序','grip','organize')}${allowed.remove?action(draft?'放弃草稿':'从当前排列移除','remove','remove','pmme-danger'):''}</div><p>整理模式中按住把手拖动。移除只改变排列，不会彻底删除已有条目。</p>`);
+    const boundary=resolveWorkspaceGroups().groups.some(group=>group.startId===id||group.endId===id);
+    showSheet(titleFor(id),`<div data-pmme-entry="${escape(id)}">${action('在上方新增','plus','before')}${action('在下方新增','plus','after')}${allowed.content?action('复制为独立草稿','copy','duplicate'):''}
+      ${!boundary?action('设为分组起点','folder','group-mark-start'):''}${workspace.pendingGroupStart&&workspace.pendingGroupStart!==id&&!boundary?action('在此结束分组','folder','group-mark-end'):''}
+      ${action('整理条目顺序','grip','organize')}${allowed.remove?action(draft?'放弃草稿':'从当前排列移除','remove','remove','pmme-danger'):''}</div><p>${boundary?'这是分组边界，随整组拖动；单独移动前请先取消分组。':''}移除只改变排列，不会彻底删除已有条目。${boundary?'移除此边界后，该分组将平铺显示。':''}</p>`);
 }
 function discardRequest(id=workspace.selected){if(!id||!hasDraft(id))return;const draft=workspace.drafts.has(id);showSheet(draft?'放弃草稿？':'放弃未保存修改？',`<p>${draft?'草稿会从目录中移除。':'本条恢复到最新保存内容。'}其他条目的草稿仍保留。</p><button class="pmme-button pmme-danger" data-pmme-action="discard" data-pmme-entry="${escape(id)}">确认放弃</button><button class="pmme-button" data-pmme-action="close">继续编辑</button>`);}
 function discardId(id){
@@ -304,7 +495,7 @@ function renderLibrary(query){
 }
 function addExisting(id){
     closeSheet(false);
-    try{syncWorkspace();const next=insertId(workspace.ids,id,workspace.selected);native.insertExisting(workspace.scope,id,next);workspace.ids=next;workspace.selected=id;settingsSaver.request(workspace);renderList();native.refreshNative();notify('已加入排列，保持关闭。');}
+    try{syncWorkspace();const next=insertId(workspace.ids,id,workspace.selected);native.insertExisting(workspace.scope,id,next);workspace.ids=next;workspace.selected=id;revealEntry(id,true);settingsSaver.request(workspace);renderList();native.refreshNative();notify('已加入排列，保持关闭。');}
     catch(error){notify(error.message,true);}
 }
 function removeExisting(id){
@@ -319,16 +510,41 @@ function paintToggle(id,enabled){
     paintStatus();
 }
 function bindSorter(){
-    sorter=createDragSorter({container:$('list'),rowSelector:'.pmme-item',handleSelector:'.pmme-drag-handle',getId:row=>row.dataset.pmmeId,scroller:$('scroll'),ghostHost:root,canStart:()=>Boolean(workspace?.organizing&&!busy),
-        onStart(){workspace.dragging=true;workspace.dragNativeIds=native.nativeOrder().map(e=>e.identifier);paintStatus();},onEnd(){if(workspace){workspace.dragging=false;paintStatus();}},
-        async onCommit(next,original){
+    let dragOwner=null,dragVersion=0,dragNativeIds=[];
+    sorter=createDragSorter({
+        container:$('list'),rowSelector:'.pmme-sort-unit',handleSelector:'.pmme-drag-handle',getId:row=>row.dataset.pmmeSortKey,
+        getOrder:()=>[...$('list').querySelectorAll('[data-pmme-id]')].map(row=>row.dataset.pmmeId),
+        dropContainers:()=>[$('list'),...$('list').querySelectorAll('[data-pmme-sort-container]')],
+        scroller:$('scroll'),ghostHost:root,decorateGhost:ghost=>ghost.querySelector('.pmme-group-body')?.remove(),
+        canStart(){
+            if(!workspace?.organizing||busy||hasSearch()||!$('sheet-layer').hidden)return false;
+            try{
+                native.assertScope(workspace.scope);
+                const expected=workspace.ids.filter(id=>!workspace.drafts.has(id)),actual=native.nativeOrder().map(entry=>entry.identifier);
+                if(JSON.stringify(expected)!==JSON.stringify(actual)){renderList();notify('排列已被其他编辑器修改，请重新拖动。',true);return false;}
+                return true;
+            }catch(error){notify(error.message,true);return false;}
+        },
+        onStart(id,original){dragOwner=workspace;dragVersion=epoch;dragNativeIds=original.filter(item=>!workspace.drafts.has(item));workspace.dragging=true;paintStatus();},
+        onTargetChange(target){
             if(!workspace)return;
-            const owner=workspace;
-            try{const changed=native.applyReorder(owner.scope,next,owner.dragNativeIds);owner.ids=next;
-                if(changed){settingsSaver.request(owner);paintStatus();native.refreshNative();notify('排列已调整。');}
-                else{renderList();notify('草稿位置已调整。');}
+            const group=target?.dataset.pmmeSortParent?workspace.groupView?.groups.find(item=>item.id===target.dataset.pmmeSortParent):null;
+            workspace.dragTarget=target?group?`放入「${group.name}」组内`:'放在顶层排列（组外）':null;
+            if(!root.hidden)paintStatus();
+        },
+        onEnd(){if(workspace){workspace.dragging=false;workspace.dragTarget=null;if(!root.hidden)paintStatus();}},
+        onCommit(next,original){
+            const owner=dragOwner;
+            if(!owner||workspace!==owner||epoch!==dragVersion)return;
+            try{
+                if(next.length!==original.length||new Set(next).size!==next.length||next.some(id=>!original.includes(id)))throw new Error('拖动期间条目发生变化，已取消排序。');
+                const previous=resolveGroups(original,owner.groupDefinitions),view=resolveGroups(next,owner.groupDefinitions);
+                if(previous.groups.some(group=>!view.groups.some(item=>item.id===group.id)))throw new Error('分组边界发生交叉，已取消排序。');
+                const changed=native.applyReorder(owner.scope,next,dragNativeIds);owner.ids=next;
+                if(changed){settingsSaver.request(owner);native.refreshNative();}
+                renderList();notify(changed?'排列已调整，分组边界一起移动。':'草稿位置已调整。');
             }catch(error){if(workspace!==owner)return;owner.ids=original;renderList();notify(error.message,true);}
-        }
+        },
     });
 }
 function capturePresetLocation(){
@@ -381,7 +597,7 @@ function open(id=null){
             root.hidden=false;document.body.style.overflow='hidden';
         }
         applyAppearance();
-        if(id&&workspace.ids.includes(id)){workspace.selected=id;workspace.organizing=false;}
+        if(id&&workspace.ids.includes(id)){workspace.selected=id;workspace.organizing=false;revealEntry(id,true);}
         renderList();updateViewport();
         if(id&&!workspace.full)requestAnimationFrame(()=>$(`row-${id}`)?.scrollIntoView({block:'nearest'}));
     }catch(error){notify(error.message,true);}
@@ -440,10 +656,19 @@ function mountEntryButton(){
 function bindUI(){
     $('retry').addEventListener('click',()=>{if(workspace?.settingsSaveFailed)settingsSaver.request(workspace);if(preferencesError)settingsSaver.request(preferencesOwner);});
     $('theme-control').addEventListener('click',showAppearancePicker);$('full-theme-control').addEventListener('click',showAppearancePicker);
-    $('close').addEventListener('click',()=>close());$('new').addEventListener('click',()=>createDraft(workspace.selected));$('new-after').addEventListener('click',()=>createDraft(workspace.selected));$('library').addEventListener('click',openLibrary);$('organize').addEventListener('click',organize);$('expand').addEventListener('click',expand);$('collapse').addEventListener('click',collapse);$('save').addEventListener('click',saveSelected);$('update').addEventListener('click',requestUpdate);$('discard').addEventListener('click',()=>discardRequest());$('full-menu').addEventListener('click',()=>entryMenu(workspace.selected));
+    $('close').addEventListener('click',()=>close());$('new-after').addEventListener('click',()=>createDraft(workspace.selected));$('library').addEventListener('click',openLibrary);$('organize').addEventListener('click',organize);$('expand').addEventListener('click',expand);$('collapse').addEventListener('click',collapse);$('save').addEventListener('click',saveSelected);$('update').addEventListener('click',requestUpdate);$('discard').addEventListener('click',()=>discardRequest());$('full-menu').addEventListener('click',()=>entryMenu(workspace.selected));
+    $('directory-search').addEventListener('input',event=>{if(!busy)setSearchQuery(event.target.value);});
+    $('clear-search').addEventListener('click',()=>{if(busy)return;setSearchQuery('');$('directory-search').focus();});
+    $('search-titles').addEventListener('change',event=>{if(busy)return;workspace.titleOnly=event.target.checked;renderList();});
+    $('groups').addEventListener('click',()=>{if(busy)return;try{showGroupTools();}catch(error){notify(error.message,true);}});
     $('previous').addEventListener('click',()=>{const index=workspace.ids.indexOf(workspace.selected);if(index>0)select(workspace.ids[index-1]);});$('next').addEventListener('click',()=>{const index=workspace.ids.indexOf(workspace.selected);if(index<workspace.ids.length-1)select(workspace.ids[index+1]);});
     $('list').addEventListener('click',event=>{
-        if(busy)return;const button=event.target.closest('button');if(!button)return;
+        if(busy)return;const button=event.target.closest('button');if(!button||button.disabled)return;
+        if(button.hasAttribute('data-pmme-create-first')){createDraft(null);return;}
+        if(button.hasAttribute('data-pmme-clear-query')){setSearchQuery('');$('directory-search').focus();return;}
+        if(button.dataset.pmmeFold){foldGroup(button.dataset.pmmeFold);return;}
+        if(button.dataset.pmmeGroupMenu){groupMenu(button.dataset.pmmeGroupMenu);return;}
+        if(button.dataset.pmmeGroupToggle){setGroupEnabled(button.dataset.pmmeGroupToggle);return;}
         if(button.dataset.pmmeSelect)select(button.dataset.pmmeSelect,true);
         if(button.dataset.pmmeMenu)entryMenu(button.dataset.pmmeMenu);
         if(button.dataset.pmmeToggle){const id=button.dataset.pmmeToggle;if(workspace.drafts.has(id)){notify('草稿不参与发送；保存时可选择启用。');return;}try{const enabled=native.togglePrompt(workspace.scope,id);paintToggle(id,enabled);settingsSaver.request(workspace);native.refreshNative();}catch(error){notify(error.message,true);}}
@@ -462,8 +687,26 @@ function bindUI(){
         if(busy)return;const button=event.target.closest('button');if(!button)return;
         if(button.dataset.pmmeTheme){setAppearance(button.dataset.pmmeTheme);closeSheet();return;}
         if(button.dataset.pmmeAdd){await addExisting(button.dataset.pmmeAdd);return;}
-        const kind=button.dataset.pmmeAction,id=button.closest('[data-pmme-entry]')?.dataset.pmmeEntry;
+        const kind=button.dataset.pmmeAction,id=button.closest('[data-pmme-entry]')?.dataset.pmmeEntry,groupId=button.closest('[data-pmme-group-action]')?.dataset.pmmeGroupAction;
         if(kind==='close'){closeSheet();return;}
+        try{
+            if(kind==='groups-tools'){showGroupTools();return;}
+            if(kind==='groups-detect'){previewGroups();return;}
+            if(kind==='groups-apply'){applyPreviewGroups();return;}
+            if(kind==='groups-expand'||kind==='groups-collapse'){foldAllGroups(kind==='groups-collapse');return;}
+            if(kind==='groups-clear'){showSheet('取消全部分组？','<p>只取消目录分组，所有条目、开关和排列保持原样。</p><button class="pmme-button pmme-danger" data-pmme-action="groups-clear-confirm">确认取消分组</button><button class="pmme-button" data-pmme-action="groups-tools">保留分组</button>');return;}
+            if(kind==='groups-clear-confirm'){workspace.groupDefinitions=[];workspace.pendingGroupStart=null;persistGroups();closeSheet(false);renderList();notify('已取消分组，所有条目保持原样。');return;}
+            if(kind==='group-mark-start'){markGroupStart(id);return;}
+            if(kind==='group-mark-end'){markGroupEnd(id);return;}
+            if(kind==='group-mark-cancel'){workspace.pendingGroupStart=null;closeSheet(false);paintStatus();return;}
+            if(['group-new','group-before','group-after','group-start','group-end','group-remove','group-enable','group-disable'].includes(kind)){
+                syncWorkspace();const group=groupById(groupId);if(!group)throw new Error('分组边界已变化，请重新识别。');closeSheet(false);
+                if(kind==='group-enable'||kind==='group-disable'){setGroupEnabled(groupId,kind==='group-enable');return;}
+                if(kind==='group-remove'){workspace.groupDefinitions=workspace.groupDefinitions.filter(item=>item?.id!==groupId);persistGroups();renderList();notify('已取消此分组，条目和子分组保持原样。');return;}
+                if(kind==='group-start'||kind==='group-end'){const target=kind==='group-start'?group.startId:group.endId;workspace.organizing=false;revealEntry(target,true);select(target);$(`row-${target}`)?.scrollIntoView({block:'nearest'});return;}
+                createDraft(kind==='group-before'?group.startId:group.endId,kind!=='group-after');return;
+            }
+        }catch(error){notify(error.message,true);return;}
         if(['before','after','duplicate'].includes(kind)){closeSheet(false);createDraft(id,kind==='before',kind==='duplicate'?bufferFor(id).values:null);return;}
         if(kind==='organize'){closeSheet(false);organize();return;}
         if(kind==='update-all'||kind==='update-saved'){await updateNamed(kind==='update-all');return;}
@@ -479,7 +722,7 @@ function bindUI(){
     });
     root.addEventListener('keydown',event=>{
         if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault();if(workspace.selected)void saveSelected();else requestUpdate();}
-        if(event.key==='Escape'&&!busy){event.preventDefault();event.stopPropagation();if(!$('sheet-layer').hidden)closeSheet();else if(workspace.full)collapse();else close();}
+        if(event.key==='Escape'&&!busy){event.preventDefault();event.stopPropagation();if(!$('sheet-layer').hidden)closeSheet();else if(workspace.full)collapse();else if(hasSearch()){setSearchQuery('');$('directory-search').focus();}else close();}
         if(event.key==='Tab'&&!$('sheet-layer').hidden){const focusable=[...$('sheet-layer').querySelectorAll('button:not(:disabled),input,select')],first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
     });
     // Keep the native configuration drawer open while interacting with our own page.

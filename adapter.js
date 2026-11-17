@@ -1,7 +1,7 @@
 import { getContext } from '../../../extensions.js';
 import { saveSettings } from '../../../../script.js';
 import { promptManager, oai_settings, getChatCompletionPreset, openai_settings, openai_setting_names } from '../../../openai.js';
-import { normalizePrompt, buildPromptPatch, projectOrder, copy } from './model.js';
+import { normalizePrompt, buildPromptPatch, projectOrder, planEnabledChange, copy } from './model.js';
 
 export function getManager() {
     if (getContext().mainApi !== 'openai') throw new Error('回声编辑台用于聊天补全预设，请先切换到聊天补全 API。');
@@ -116,6 +116,15 @@ export function togglePrompt(scope,id) {
     const entry=manager.getPromptOrderEntry(manager.activeCharacter,id); if (!entry) throw new Error('条目不在当前排列中。');
     entry.enabled=!entry.enabled;
     return entry.enabled;
+}
+export function setPromptsEnabled(scope, ids, enabled) {
+    assertScope(scope);
+    const plan = planEnabledChange(nativeOrder(), ids, enabled, id => {
+        const prompt = findPrompt(id);
+        return Boolean(prompt && permissions(prompt).toggle);
+    });
+    for (const change of plan.changes) change.entry.enabled = change.enabled;
+    return { changed:plan.changes.map(change => change.entry.identifier), skipped:plan.skipped };
 }
 export function insertExisting(scope,id,visibleOrder) {
     assertScope(scope);
