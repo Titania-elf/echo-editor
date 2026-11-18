@@ -67,9 +67,8 @@
 #pmme-root[data-pmme-theme="tavern"] .pmme-frame { backdrop-filter: blur(16px); }
 #pmme-root .pmme-directory-view, #pmme-root .pmme-full-view { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 #pmme-root .pmme-topbar { display: flex; align-items: center; gap: 10px; min-height: 58px; border-bottom: 1px solid var(--pmme-line); flex: 0 0 auto; }
-#pmme-root .pmme-topbar h2 { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 21px; font-weight: 600; flex: 1; white-space: nowrap; letter-spacing: .04em; }
-#pmme-root:not([data-pmme-theme="tavern"]) .pmme-topbar h2 { font-family: "Songti SC", "Noto Serif CJK SC", "STSong", "SimSun", serif; }
-#pmme-root .pmme-topbar h2 svg { color: var(--pmme-accent); }
+#pmme-root .pmme-topbar h2 { display: flex; align-items: center; gap: 8px; min-width: 0; font-family: inherit; font-size: 18px; font-weight: 600; flex: 1; white-space: nowrap; letter-spacing: normal; }
+#pmme-root .pmme-topbar h2 .pmme-icon { width: 1em; height: 1em; color: var(--pmme-accent); }
 #pmme-root .pmme-button.pmme-return-button { padding-inline: 0; flex: 0 0 auto; }
 #pmme-root .pmme-button.pmme-theme-control { flex: 0 0 auto; gap: 5px; padding-inline: 9px; font-size: 12px; }
 #pmme-root .pmme-theme-control .pmme-icon { width: 17px; height: 17px; }
@@ -78,7 +77,7 @@
 #pmme-root .pmme-icon-button:hover, #pmme-root .pmme-quiet:hover { background: color-mix(in srgb, var(--pmme-accent) 9%, transparent); }
 #pmme-root .pmme-preset { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-block: 14px 12px; flex: 0 0 auto; }
 #pmme-root .pmme-preset > div { min-width: 0; display: grid; gap: 4px; }
-#pmme-root .pmme-preset h3 { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+#pmme-root .pmme-preset h3 { font-family: inherit; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
 #pmme-root #pmme-status { font-size: 12px; color: var(--pmme-muted); }
 #pmme-root .pmme-pending, #pmme-root #pmme-status.pmme-pending { color: var(--pmme-warning); }
 #pmme-root .pmme-button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--pmme-line); border-radius: 10px; font-weight: 550; font-size: 14px; white-space: nowrap; }
@@ -93,6 +92,11 @@
 #pmme-root .pmme-search-control { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; padding-left: 10px; background: var(--pmme-field); border: 1px solid var(--pmme-line); border-radius: 10px; color: var(--pmme-muted); }
 #pmme-root .pmme-search-control input[type="search"] { border: 0; background: transparent; margin: 0; padding-left: 4px; }
 #pmme-root .pmme-search-control:focus-within { border-color: var(--pmme-accent); }
+/* Replacement controls appear only for a body search or its last result. */
+#pmme-root .pmme-replace-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: 0 0 auto; min-width: 0; padding-block: 0 8px; }
+#pmme-root .pmme-replace-tools > span { flex: 1; min-width: 0; font-size: 12px; line-height: 1.5; color: var(--pmme-muted); overflow-wrap: anywhere; }
+#pmme-root .pmme-replace-tools .pmme-button { flex: 0 0 auto; font-size: 13px; padding-inline: 10px; }
+#pmme-root .pmme-replace-tools .pmme-icon { width: 17px; height: 17px; }
 #pmme-root .pmme-search-scope { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; font-size: 12px; color: var(--pmme-muted); white-space: nowrap; cursor: pointer; flex: 0 0 auto; }
 #pmme-root .pmme-search-scope input { width: 16px; height: 16px; margin: 0; accent-color: var(--pmme-accent); }
 #pmme-root .pmme-toolbar .pmme-button { font-size: 13px; padding-inline: 10px; gap: 5px; }
@@ -232,6 +236,50 @@
 #pmme-root .pmme-theme-copy strong { font-size: 14px; font-weight: 600; }
 #pmme-root .pmme-theme-copy small { font-size: 12px; color: var(--pmme-muted); line-height: 1.6; }
 #pmme-root .pmme-current-theme { flex: 0 0 auto; font-size: 12px; color: var(--pmme-accent); }
+/* Versions use the editor's paper/ink hierarchy, not another settings-card grid. */
+#pmme-root .pmme-preset > div { flex: 1; }
+#pmme-root #pmme-history { flex: 0 0 auto; }
+#pmme-root #pmme-history .pmme-icon { width: 17px; height: 17px; }
+#pmme-root .pmme-version-fields { display: grid; gap: 12px; padding-block: 6px 8px; min-width: 0; }
+#pmme-root .pmme-version-fields textarea { height: 88px; min-height: 76px; max-height: 180px; resize: vertical; line-height: 1.6; }
+#pmme-root #pmme-sheet-body .pmme-version-error { color: var(--pmme-danger); overflow-wrap: anywhere; }
+#pmme-root .pmme-history-record { display: grid; gap: 5px; min-width: 0; padding-block: 16px; border-bottom: 1px solid var(--pmme-line); }
+#pmme-root .pmme-history-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
+#pmme-root .pmme-history-heading strong { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+#pmme-root .pmme-history-current { flex: 0 0 auto; font-size: 11px; color: var(--pmme-accent); border: 1px solid var(--pmme-line); border-radius: 5px; padding: 1px 6px; }
+#pmme-root .pmme-history-record time, #pmme-root .pmme-history-record small { font-size: 12px; color: var(--pmme-muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#pmme-root #pmme-sheet-body .pmme-history-note { color: var(--pmme-ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+#pmme-root .pmme-history-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 7px; }
+#pmme-root .pmme-history-actions > .pmme-icon-button { margin-left: auto; }
+#pmme-root .pmme-history-empty { padding-block: 24px; overflow-wrap: anywhere; }
+#pmme-root .pmme-history-preview { min-width: 0; }
+#pmme-root .pmme-history-preview details { border-bottom: 1px solid var(--pmme-line); }
+#pmme-root .pmme-history-preview summary { min-height: 44px; padding-block: 10px; cursor: pointer; overflow-wrap: anywhere; }
+#pmme-root .pmme-history-preview summary small { color: var(--pmme-muted); }
+#pmme-root .pmme-history-preview pre { margin: 0; padding-block: 4px 14px; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 14px; line-height: 1.75; }
+#pmme-root .pmme-replace-fields { display: grid; gap: 10px; padding-block: 6px; min-width: 0; }
+#pmme-root .pmme-replace-fields textarea { height: 88px; min-height: 60px; max-height: 200px; resize: vertical; line-height: 1.6; }
+#pmme-root #pmme-replace-find { height: 60px; color: var(--pmme-muted); }
+#pmme-root .pmme-replace-candidate { min-width: 0; padding-block: 12px; border-bottom: 1px solid var(--pmme-line); }
+#pmme-root .pmme-replace-choice { display: flex; align-items: flex-start; gap: 9px; min-height: 44px; padding-block: 4px 10px; cursor: pointer; }
+#pmme-root .pmme-replace-choice > input { width: 18px; height: 18px; flex: 0 0 auto; margin: 3px 0 0; accent-color: var(--pmme-accent); }
+#pmme-root .pmme-replace-choice > span { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+#pmme-root .pmme-replace-choice strong { font-size: 14px; font-weight: 600; }
+#pmme-root .pmme-replace-choice small, #pmme-root .pmme-replace-result-row small { font-size: 12px; color: var(--pmme-muted); }
+#pmme-root .pmme-replace-pair { display: grid; gap: 8px; min-width: 0; margin-bottom: 12px; }
+#pmme-root .pmme-replace-pair > div { min-width: 0; padding-left: 10px; border-left: 2px solid var(--pmme-line); }
+#pmme-root .pmme-replace-pair > div:last-child { border-color: var(--pmme-accent); }
+#pmme-root .pmme-replace-pair > div > span { font-size: 11px; color: var(--pmme-muted); }
+#pmme-root .pmme-replace-pair pre { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; line-height: 1.7; }
+#pmme-root .pmme-replace-deletion { color: var(--pmme-danger); font-size: 12px; }
+#pmme-root .pmme-replace-skipped summary { min-height: 44px; padding-block: 10px; cursor: pointer; font-size: 13px; color: var(--pmme-muted); }
+#pmme-root .pmme-replace-skipped ul { margin-block: 4px 10px; padding-left: 22px; font-size: 12px; color: var(--pmme-muted); overflow-wrap: anywhere; }
+#pmme-root .pmme-replace-result-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding-block: 12px; border-bottom: 1px solid var(--pmme-line); }
+#pmme-root .pmme-replace-result-row > div { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+#pmme-root .pmme-replace-result-row strong { font-size: 14px; font-weight: 550; }
+#pmme-root .pmme-replace-result-row > button { flex: 0 0 auto; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-replace-pair { grid-template-columns: repeat(2,minmax(0,1fr)); }
+@media (max-width: 350px) { #pmme-root #pmme-history .pmme-icon { display: none; } }
 #pmme-root .pmme-sheet-action { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 7px; text-align: left; border-bottom: 1px solid var(--pmme-line); font-size: 14px; }
 #pmme-root .pmme-sheet-action span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 #pmme-root .pmme-library-row { display: flex; align-items: center; gap: 12px; padding-block: 12px; border-bottom: 1px solid var(--pmme-line); }
@@ -250,5 +298,89 @@
 #pmme-settings .pmme-setting-theme { display: grid; gap: 6px; padding-block: 8px; }
 #pmme-settings #pmme-setting-open { width: max-content; white-space: nowrap; }
 @media (max-width: 420px) { #pmme-root .pmme-mode-label { display: none; } }
-@media (max-width: 350px) { #pmme-root .pmme-button { padding-inline: 9px; font-size: 13px; } #pmme-root .pmme-return-button { padding-inline: 0; } #pmme-root .pmme-full-header { gap: 6px; } #pmme-root .pmme-topbar { gap: 8px; } #pmme-root .pmme-topbar h2 { font-size: 18px; gap: 6px; letter-spacing: .02em; } }
+@media (max-width: 350px) { #pmme-root .pmme-button { padding-inline: 9px; font-size: 13px; } #pmme-root .pmme-return-button { padding-inline: 0; } #pmme-root .pmme-full-header { gap: 6px; } #pmme-root .pmme-topbar { gap: 8px; } #pmme-root .pmme-topbar h2 { font-size: 16px; gap: 6px; } }
+/* New wrappers flatten into the original mobile flex layout. Desktop-only controls
+   are hidden after the base button rules so phone geometry stays unchanged. */
+#pmme-root .pmme-workbench, #pmme-root .pmme-directory-pane { display: contents; }
+#pmme-root :is(.pmme-detail-pane, .pmme-splitter, .pmme-desktop-close, .pmme-layout-control, .pmme-editor-status) { display: none; }
+#pmme-root[data-pmme-wide="true"] .pmme-layout-control { display: inline-flex; }
+
+/* Desktop is a layout choice, independent of paper/night/tavern colors. */
+#pmme-root[data-pmme-layout="desktop"] .pmme-frame { max-width: 1600px; border-inline: 1px solid var(--pmme-line); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-directory-view { display: grid; grid-template-columns: max-content minmax(0, 1fr); grid-template-rows: 64px minmax(0, 1fr); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-topbar { grid-column: 1; grid-row: 1; gap: 12px; min-height: 0; padding-inline: 20px 12px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-topbar h2 { flex: 0 0 auto; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-mode-label { display: none; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-preset { grid-column: 2; grid-row: 1; min-width: 0; gap: 12px; padding: 8px 20px 8px 12px; border-bottom: 1px solid var(--pmme-line); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-preset > div { flex: 1; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 8px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-preset h3 { grid-column: 1; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#pmme-root[data-pmme-layout="desktop"] #pmme-status { grid-column: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#pmme-root[data-pmme-layout="desktop"] #pmme-retry { grid-column: 2; grid-row: 1 / 3; align-self: center; font-size: 12px; }
+#pmme-root[data-pmme-layout="desktop"] :is(.pmme-topbar, .pmme-preset) .pmme-button { min-height: 36px; padding: 6px 10px; font-size: 13px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-desktop-close { display: inline-flex; width: 36px; height: 36px; min-height: 36px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-workbench { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: var(--pmme-directory-width, 360px) 6px minmax(0, 1fr); min-width: 0; min-height: 0; overflow: hidden; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-directory-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; padding-top: 14px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-directory-pane .pmme-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px 8px; padding-block: 2px 12px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-toolbar .pmme-grow { display: none; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-search-scope { grid-area: 1 / 1 / 2 / 2; min-height: 36px; }
+#pmme-root[data-pmme-layout="desktop"] #pmme-groups { grid-area: 1 / 2 / 2 / 3; }
+#pmme-root[data-pmme-layout="desktop"] #pmme-organize { grid-area: 1 / 3 / 2 / 4; }
+#pmme-root[data-pmme-layout="desktop"] #pmme-library { grid-area: 2 / 1 / 3 / 4; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-toolbar .pmme-button { min-height: 36px; padding-block: 6px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-caption { align-items: flex-start; font-size: 11px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-footnote { font-size: 11px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-item-top { min-height: 54px; padding-block: 4px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-item-main { min-height: 40px; padding: 4px 5px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-item-title { font-size: 14px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-item.pmme-selected { box-shadow: inset 3px 0 0 var(--pmme-accent); background: color-mix(in srgb, var(--pmme-accent) 8%, transparent); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-directory-pane :is(.pmme-icon-button, .pmme-toggle) { width: 34px; height: 34px; min-height: 34px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-directory-pane .pmme-toggle { flex-basis: 34px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-group-header { min-height: 56px; padding-block: 4px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-group-main { min-height: 42px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-group-copy strong { font-size: 14px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-boundary > .pmme-item-top { min-height: 46px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-boundary .pmme-item-title { font-size: 12px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-splitter { display: block; position: relative; min-height: 0; cursor: col-resize; touch-action: none; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-splitter::before { content: ""; position: absolute; inset: 0 2px; background: var(--pmme-line); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-splitter:is(:hover, :focus-visible)::before { background: var(--pmme-accent); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-splitter:focus-visible { outline: 2px solid var(--pmme-accent); outline-offset: -2px; }
+#pmme-root.pmme-resizing, #pmme-root.pmme-resizing * { cursor: col-resize !important; user-select: none !important; }
+#pmme-root.pmme-busy .pmme-splitter { pointer-events: none; opacity: .4; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-header { display: flex; align-items: center; gap: 12px; min-height: 76px; flex: 0 0 auto; padding: 12px 24px; border-bottom: 1px solid var(--pmme-line); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-heading { flex: 1; min-width: 0; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-context { font-size: 11px; color: var(--pmme-muted); overflow-wrap: anywhere; }
+#pmme-root[data-pmme-layout="desktop"] #pmme-detail-title { font-size: 18px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-actions { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-actions .pmme-button { min-height: 36px; font-size: 13px; padding-block: 6px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-actions .pmme-icon-button { width: 36px; height: 36px; min-height: 36px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-filter-note { flex: 0 0 auto; padding: 8px 24px; color: var(--pmme-warning); font-size: 12px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-empty { flex: 1; align-content: center; padding: 24px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot { display: flex; flex: 1; min-width: 0; min-height: 0; padding-inline: 24px; overflow: hidden; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot > .pmme-editor { flex: 1; min-height: 0; padding-block: 18px 0; overflow-y: auto; overscroll-behavior-y: contain; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot .pmme-editor-meta { flex: 0 0 auto; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot .pmme-role-field { width: 140px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot .pmme-body-field { flex: 1; min-height: 180px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot textarea { flex: 1; height: 0; min-height: 150px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot .pmme-source { flex: 1; min-height: 140px; overflow-y: auto; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot :is(.pmme-advanced, .pmme-check) { flex: 0 0 auto; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot .pmme-advanced-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); max-height: 220px; overflow-y: auto; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot :is(#pmme-depth-note, #pmme-override-field, .pmme-field:has(.pmme-triggers)) { grid-column: 1 / -1; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-editor-footer { position: sticky; bottom: 0; z-index: 1; flex: 0 0 auto; gap: 10px; margin-top: auto; padding-block: 12px 16px; border-top: 1px solid var(--pmme-line); background: var(--pmme-surface); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-editor-status { display: block; flex: 1; min-width: 0; margin-right: auto; font-size: 12px; color: var(--pmme-muted); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-editor-status.pmme-pending { color: var(--pmme-warning); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-editor-footer .pmme-button { min-height: 38px; padding-block: 6px; }
+#pmme-root[data-pmme-layout="desktop"] #pmme-save { flex: 0 0 auto; min-width: 120px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot #pmme-expand { display: none; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-full-header { min-height: 64px; padding-inline: 24px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-full-slot > .pmme-editor { width: 100%; max-width: 1120px; margin-inline: auto; }
+#pmme-root[data-pmme-layout="desktop"] :is(.pmme-full-context, .pmme-full-nav) { width: 100%; max-width: 1152px; margin-inline: auto; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-sheet-layer { align-items: center; padding: 16px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-sheet { width: min(560px, 100%); max-height: min(85%, 720px); padding: 20px; border: 1px solid var(--pmme-line); border-radius: 14px; box-shadow: 0 12px 40px var(--pmme-shadow); }
+#pmme-root[data-pmme-layout="desktop"] .pmme-sheet-handle { display: none; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-sheet header { padding-block: 0 14px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-sheet-layer.pmme-popover { padding: 0; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-popover .pmme-sheet { position: absolute; left: var(--pmme-sheet-left, 16px); top: var(--pmme-sheet-top, 16px); width: min(360px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 14px; border-radius: 12px; }
+#pmme-root[data-pmme-layout="desktop"] .pmme-popover .pmme-backdrop { background: color-mix(in srgb, var(--pmme-backdrop) 28%, transparent); }
+
 @media (prefers-reduced-motion: no-preference) { #pmme-root button { transition: background .15s ease, color .15s ease; } #pmme-root .pmme-switch-track { transition: background .15s ease, border-color .15s ease; } #pmme-root .pmme-switch-track::before { transition: transform .15s ease; } }

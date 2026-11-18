@@ -1,9 +1,12 @@
-// Literal, case-insensitive search. Query characters never act as a regular expression.
-export function textMatch(text, query) {
-    const needle = String(query ?? '').trim();
+// Search and replacement share literal matching; query characters never become regex syntax.
+export function literalSearchPattern(query, { caseSensitive=false, all=false } = {}) {
+    const needle=String(query ?? '').trim();
     if (!needle) return null;
-    const pattern = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const match = new RegExp(pattern, 'iu').exec(String(text ?? ''));
+    const pattern=needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(pattern,`${all?'g':''}${caseSensitive?'':'i'}u`);
+}
+export function textMatch(text, query) {
+    const match=literalSearchPattern(query)?.exec(String(text ?? ''));
     return match ? { start:match.index, end:match.index + match[0].length } : null;
 }
 

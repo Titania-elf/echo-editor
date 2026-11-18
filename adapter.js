@@ -1,7 +1,8 @@
 import { getContext } from '../../../extensions.js';
 import { saveSettings } from '../../../../script.js';
-import { promptManager, oai_settings, getChatCompletionPreset, openai_settings, openai_setting_names } from '../../../openai.js';
-import { normalizePrompt, buildPromptPatch, projectOrder, planEnabledChange, copy } from './model.js';
+import { promptManager, oai_settings, getChatCompletionPreset, openai_settings, openai_setting_names, settingsToUpdate } from '../../../openai.js';
+import { normalizePrompt, buildPromptPatch, projectOrder, planEnabledChange, planPromptDeletion, copy } from './model.js';
+import { serializePreset } from './history.js';
 
 export function getManager() {
     if (getContext().mainApi !== 'openai') throw new Error('回声编辑台用于聊天补全预设，请先切换到聊天补全 API。');
@@ -34,6 +35,55 @@ function promptState(settings) { return JSON.stringify([settings?.prompts || [],
 export function presetNeedsUpdate() {
     const name = presetName(), index = openai_setting_names?.[name];
     return index === undefined || !openai_settings?.[index] || promptState(oai_settings) !== promptState(openai_settings[index]);
+}
+
+export function captureNamedPreset(scope) {
+    assertScope(scope);
+    const name=presetName(),index=openai_setting_names?.[name],preset=openai_settings?.[index];
+    if (!name || index===undefined || !preset) throw new Error('请先在酒馆中选择一个已命名的预设。');
+    return serializePreset(preset);
+}
+export function captureCurrentPreset(scope, base=null) {
+    assertScope(scope);
+    // Native serialization maps temperature -> temp_openai, etc. Keep unknown file fields too,
+    // but do not copy unrelated global settings (credentials, UI preferences) into a preset.
+    const original=base || captureNamedPreset(scope);
+    return serializePreset({...copy(original),...getChatCompletionPreset(oai_settings)});
+}
+export function currentPresetDiffers(scope, preset) {
+    assertScope(scope);
+    const current=getChatCompletionPreset(oai_settings);
+    return Object.entries(settingsToUpdate).some(([key,[,,,isConnection]])=>Object.hasOwn(preset,key) && (!isConnection||oai_settings.bind_preset_to_connection) && JSON.stringify(current[key])!==JSON.stringify(preset[key]));
+}
+export function applyPresetSnapshot(scope, preset) {
+    assertScope(scope);
+    const manager=getManager(),snapshot=serializePreset(preset);
+    const bucket=snapshot.prompt_order.find(item=>String(item.character_id)===String(manager.activeCharacter.id));
+    if (!bucket) throw new Error('这个版本没有当前角色的排列，请切换到保存该排列的角色后再载入。');
+    const ids=new Set(snapshot.prompts.map(prompt=>prompt.identifier));
+    if (bucket.order.some(entry=>!ids.has(entry.identifier))) throw new Error('这个版本的当前排列引用了缺失条目，未载入历史版本。');
+    const jq=globalThis.jQuery || globalThis.$;
+    // Use the same mapping and connection-binding boundary as native preset loading.
+    for (const [key,[selector,setting,isCheckbox,isConnection]] of Object.entries(settingsToUpdate)) {
+        if (isConnection && !oai_settings.bind_preset_to_connection) continue;
+        if (key!=='extensions' && snapshot[key]===undefined) continue;
+        const value=copy(key==='extensions' ? snapshot.extensions || {} : snapshot[key]);
+        if (selector && key!=='extensions' && jq) {
+            const control=jq(selector);
+            if (isCheckbox) control.prop('checked',value);else control.val(value);
+            control.trigger('input',{source:'preset'});
+        }
+        oai_settings[setting]=value;
+        if (manager.serviceSettings!==oai_settings) manager.serviceSettings[setting]=value;
+    }
+    manager.sanitizeServiceSettings?.();
+    for (const id of ['main','nsfw','jailbreak']) { const prompt=findPrompt(id);if(prompt)updateQuickEdit(prompt); }
+    manager.hidePopup?.();manager.clearEditForm?.();
+    if (jq) {
+        if (oai_settings.bind_preset_to_connection) for (const selector of ['#chat_completion_source','#openrouter_providers_chat','#openrouter_quantizations_chat','#nanogpt_provider']) jq(selector).trigger('change');
+        jq('#openai_logit_bias_preset').trigger('change');
+    }
+    refreshNative();
 }
 
 export function persistSettings(expected, timeout = 15000, immediate = false) {
@@ -141,13 +191,23 @@ export function removePrompt(scope,id) {
     if (!prompt || !permissions(prompt).remove) throw new Error('原生编辑器不允许移除这个内置条目。');
     manager.detachPrompt(prompt,manager.activeCharacter);
 }
+export function deletePrompt(scope,id,expectedSnapshot) {
+    assertScope(scope);
+    const manager=getManager(),settings=manager.serviceSettings;
+    const plan=planPromptDeletion(settings.prompts,settings.prompt_order,id,prompt=>manager.isPromptDeletionAllowed(prompt));
+    if(expectedSnapshot!==undefined&&JSON.stringify(plan.prompt)!==expectedSnapshot){
+        throw new Error('条目已被其他编辑器修改，请重新确认删除。');
+    }
+    settings.prompts.splice(plan.index,1);
+    for(const {order,indices} of plan.references)for(const index of [...indices].reverse())order.splice(index,1);
+}
 
 // Match native “update preset”: save a snapshot and refresh the native cache WITHOUT reapplying the preset.
-export async function saveNamedPreset(scope) {
+export async function saveNamedPreset(scope, preset=captureCurrentPreset(scope)) {
     assertScope(scope);
     const name=presetName(), index=openai_setting_names?.[name];
     if (!name || index===undefined || !openai_settings?.[index]) throw new Error('请先在酒馆中选择一个已命名的预设。');
-    const snapshot=getChatCompletionPreset(oai_settings),controller=new AbortController();
+    const snapshot=serializePreset(preset),controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),15000);
     let data;
     try {
@@ -158,7 +218,11 @@ export async function saveNamedPreset(scope) {
         if(controller.signal.aborted)throw new Error('预设更新超时。当前内容保留，请检查连接后重试。');
         throw error;
     } finally { clearTimeout(timer); }
-    const savedIndex=openai_setting_names?.[data.name];
-    if (savedIndex!==undefined && openai_settings?.[savedIndex]) Object.assign(openai_settings[savedIndex],copy(snapshot));
-    return String(data.name || name);
+    const savedName=String(data.name || name),savedIndex=openai_setting_names?.[savedName];
+    if (savedIndex!==undefined && openai_settings?.[savedIndex]) {
+        const cached=openai_settings[savedIndex];
+        for (const key of Object.keys(cached)) if (!Object.hasOwn(snapshot,key)) delete cached[key];
+        Object.assign(cached,copy(snapshot));
+    }
+    return savedName;
 }

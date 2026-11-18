@@ -82,3 +82,22 @@ export function planEnabledChange(order, ids, enabled, canToggle = () => true) {
     }
     return { changes, skipped };
 }
+
+// Preflight deletion from the shared prompt library and every character order.
+// Keep the native arrays/objects intact; the adapter applies only these splices.
+export function planPromptDeletion(prompts, buckets, id, canDelete = () => true) {
+    if (typeof id !== 'string' || !id || !Array.isArray(prompts) || !Array.isArray(buckets)) {
+        throw new Error('条目或排列数据无效，已取消删除。');
+    }
+    const matches = prompts.flatMap((prompt, index) => prompt?.identifier === id ? [index] : []);
+    if (matches.length !== 1) throw new Error(matches.length ? '条目标识重复，已取消删除。' : '条目已不存在，请刷新目录后重试。');
+    const index = matches[0], prompt = prompts[index];
+    if (prompt.system_prompt !== false || !canDelete(prompt)) throw new Error('原生编辑器不允许删除这个内置或受限条目。');
+    const references = [];
+    for (const bucket of buckets) {
+        if (!bucket || !Array.isArray(bucket.order)) throw new Error('角色排列数据无效，已取消删除。');
+        const indices = bucket.order.flatMap((entry, position) => entry?.identifier === id ? [position] : []);
+        if (indices.length) references.push({ order: bucket.order, indices });
+    }
+    return { index, prompt, references };
+}
