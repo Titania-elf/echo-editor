@@ -57,6 +57,8 @@
 #pmme-root[hidden], #pmme-root [hidden] { display: none !important; }
 #pmme-root *, #pmme-root *::before, #pmme-root *::after { box-sizing: border-box; }
 #pmme-root h2, #pmme-root h3, #pmme-root p { margin: 0; }
+/* Main headings use the body font, including under host heading overrides. */
+#pmme-root .pmme-topbar h2, #pmme-root .pmme-preset h3 { font-family: inherit !important; font-style: inherit !important; }
 #pmme-root button, #pmme-root input, #pmme-root select, #pmme-root textarea { font: inherit; max-width: 100%; }
 #pmme-root button { color: inherit; cursor: pointer; border: 0; background: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 #pmme-root button:disabled { opacity: .4; cursor: default; }
@@ -67,7 +69,7 @@
 #pmme-root[data-pmme-theme="tavern"] .pmme-frame { backdrop-filter: blur(16px); }
 #pmme-root .pmme-directory-view, #pmme-root .pmme-full-view { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 #pmme-root .pmme-topbar { display: flex; align-items: center; gap: 10px; min-height: 58px; border-bottom: 1px solid var(--pmme-line); flex: 0 0 auto; }
-#pmme-root .pmme-topbar h2 { display: flex; align-items: center; gap: 8px; min-width: 0; font-family: inherit; font-size: 18px; font-weight: 600; flex: 1; white-space: nowrap; letter-spacing: normal; }
+#pmme-root .pmme-topbar h2 { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 18px; font-weight: 600; flex: 1; white-space: nowrap; letter-spacing: normal; }
 #pmme-root .pmme-topbar h2 .pmme-icon { width: 1em; height: 1em; color: var(--pmme-accent); }
 #pmme-root .pmme-button.pmme-return-button { padding-inline: 0; flex: 0 0 auto; }
 #pmme-root .pmme-button.pmme-theme-control { flex: 0 0 auto; gap: 5px; padding-inline: 9px; font-size: 12px; }
@@ -77,7 +79,7 @@
 #pmme-root .pmme-icon-button:hover, #pmme-root .pmme-quiet:hover { background: color-mix(in srgb, var(--pmme-accent) 9%, transparent); }
 #pmme-root .pmme-preset { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-block: 14px 12px; flex: 0 0 auto; }
 #pmme-root .pmme-preset > div { min-width: 0; display: grid; gap: 4px; }
-#pmme-root .pmme-preset h3 { font-family: inherit; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+#pmme-root .pmme-preset h3 { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
 #pmme-root #pmme-status { font-size: 12px; color: var(--pmme-muted); }
 #pmme-root .pmme-pending, #pmme-root #pmme-status.pmme-pending { color: var(--pmme-warning); }
 #pmme-root .pmme-button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--pmme-line); border-radius: 10px; font-weight: 550; font-size: 14px; white-space: nowrap; }

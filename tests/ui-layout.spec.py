@@ -747,8 +747,8 @@ def colors(fixture: Fixture, selector: str) -> dict:
 
 
 def check_heading_typography(fixture: Fixture) -> None:
-    # Native/custom themes may style headings separately from the body font.
-    fixture.page.add_style_tag(content="h2, h3 { font-family: monospace; }")
+    # Native/custom themes may force a separate heading font and italic style.
+    fixture.page.add_style_tag(content="h2, h3 { font-family: monospace !important; font-style: italic !important; }")
     title = fixture.page.locator(".pmme-topbar h2")
     expect(title).to_have_text("回声编辑台")
     expect(title.locator("svg")).to_have_count(1)
@@ -766,11 +766,15 @@ def check_heading_typography(fixture: Fixture) -> None:
                 const title = document.querySelector('.pmme-topbar h2');
                 const preset = document.getElementById('pmme-preset-name');
                 const text = getComputedStyle(title), icon = getComputedStyle(title.querySelector('svg'));
+                const presetText = getComputedStyle(preset), content = getComputedStyle(document.getElementById('pmme-content'));
                 return {hostFont:getComputedStyle(document.body).fontFamily, titleFont:text.fontFamily,
-                    presetFont:getComputedStyle(preset).fontFamily, titleSize:parseFloat(text.fontSize),
+                    presetFont:presetText.fontFamily, contentFont:content.fontFamily,
+                    titleStyle:text.fontStyle, presetStyle:presetText.fontStyle, contentStyle:content.fontStyle,
+                    titleSize:parseFloat(text.fontSize),
                     iconWidth:parseFloat(icon.width), iconHeight:parseFloat(icon.height), spacing:text.letterSpacing};
             }""")
-            require(styles["titleFont"] == styles["hostFont"] and styles["presetFont"] == styles["hostFont"], f"Headings did not follow the live host font in {theme}: {styles}")
+            require(styles["titleFont"] == styles["presetFont"] == styles["contentFont"] == styles["hostFont"], f"Headings did not follow the live body font in {theme}: {styles}")
+            require(styles["titleStyle"] == styles["presetStyle"] == styles["contentStyle"], f"Headings did not follow the body font style in {theme}: {styles}")
             require(styles["titleSize"] == styles["iconWidth"] == styles["iconHeight"] == expected_size, f"Title and icon sizes differ at {fixture.width}px: {styles}")
             require(styles["spacing"] == "normal", f"Title retained custom letter spacing: {styles}")
             no_overflow(fixture)
