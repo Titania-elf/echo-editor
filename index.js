@@ -1,5 +1,6 @@
 import { getContext } from '../../../extensions.js';
 import { doNavbarIconClick } from '../../../../script.js';
+import { download } from '../../../utils.js';
 import * as native from './adapter.js';
 import { normalizePrompt, draftChanged, mergeDraftPositions, insertId, PROMPT_FIELDS, TRIGGERS, copy } from './model.js';
 import { createDragSorter } from './drag-sort.js';
@@ -8,7 +9,7 @@ import { parseGroupName, detectGroups, resolveGroups } from './groups.js';
 import { textMatch, searchEntries } from './search.js';
 import { planContentReplacement, prepareReplacementPatch, prepareReplacementUndo, mapReplacementOffset } from './replace.js';
 import { DESKTOP_MIN_WIDTH, DEFAULT_DIRECTORY_WIDTH, normalizeLayout, normalizeDirectoryWidth, resolveLayout, directoryWidthBounds, fitDirectoryWidth } from './layout.js';
-import { createHistoryStore, assertHistoryStore, versionsFor, versionById, headVersion, suggestVersion, validateVersion, planVersionSave, removeVersion, groupsForPreset, replacePresetGroups, scopePresetName, historyBytes, HISTORY_WARNING_BYTES, VERSION_LIMIT, NOTE_LIMIT } from './history.js';
+import { createHistoryStore, assertHistoryStore, versionsFor, versionById, headVersion, suggestVersion, validateVersion, planVersionSave, removeVersion, serializePreset, groupsForPreset, replacePresetGroups, scopePresetName, historyBytes, HISTORY_WARNING_BYTES, VERSION_LIMIT, NOTE_LIMIT } from './history.js';
 
 const MODULE = '回声编辑台';
 const LEGACY_MODULE = 'st-preset-mobile-editor';
@@ -767,21 +768,37 @@ function renderHistoryList(query='') {
     const matches=[...versions].reverse().filter(record=>`${record.version} ${record.note} ${historyTime(record.createdAt)}`.toLocaleLowerCase().includes(needle));
     $('history-list').innerHTML=matches.map(record=>{
         const parent=versionById(store,name,record.parentId),current=record.id===workspace.baseVersionId;
-        return `<article class="pmme-history-record" data-pmme-version-id="${escape(record.id)}"><div class="pmme-history-heading"><strong>${escape(record.version)}</strong>${current?'<span class="pmme-history-current">编辑起点</span>':''}</div><time datetime="${escape(record.createdAt)}">${escape(historyTime(record.createdAt))}</time><p class="pmme-history-note">${escape(record.note||'未填写更新说明')}</p><small>${record.preset?.prompts?.length||0} 条库内条目${parent?` · 基于 ${escape(parent.version)}`:''}</small><div class="pmme-history-actions"><button type="button" class="pmme-button" data-pmme-action="history-view">查看</button><button type="button" class="pmme-button pmme-secondary" data-pmme-action="history-load">载入此版本</button><button type="button" class="pmme-icon-button pmme-danger" data-pmme-action="history-delete" aria-label="删除历史版本 ${escape(record.version)}" title="删除历史记录">${icon('trash')}</button></div></article>`;
+        return `<article class="pmme-history-record" data-pmme-version-id="${escape(record.id)}"><div class="pmme-history-heading"><strong>${escape(record.version)}</strong>${current?'<span class="pmme-history-current">编辑起点</span>':''}</div><time datetime="${escape(record.createdAt)}">${escape(historyTime(record.createdAt))}</time><p class="pmme-history-note">${escape(record.note||'未填写更新说明')}</p><small>${record.preset?.prompts?.length||0} 条库内条目${parent?` · 基于 ${escape(parent.version)}`:''}</small><div class="pmme-history-actions"><button type="button" class="pmme-button" data-pmme-action="history-view">查看</button><button type="button" class="pmme-button pmme-quiet" data-pmme-action="history-export" title="下载此版本的酒馆预设 JSON">导出预设</button><button type="button" class="pmme-button pmme-secondary" data-pmme-action="history-load">载入此版本</button><button type="button" class="pmme-icon-button pmme-danger" data-pmme-action="history-delete" aria-label="删除历史版本 ${escape(record.version)}" title="删除历史记录">${icon('trash')}</button></div></article>`;
     }).join('') || `<p class="pmme-history-empty">${versions.length?'没有匹配版本，试试版本号或更新说明。':'还没有历史版本。首次更新预设时，会保留原版并开始记录。'}</p>`;
 }
 function showHistory() {
     if(busy)return;
     try {
         const store=historyStore(),size=historyBytes(store);
-        showSheet(`「${native.presetName()}」的历史版本`,`<p>完整保存的版本都保留在这里。载入旧版后可以继续编辑，再保存为新版本；不会删除后续版本。</p>${historyError?'<p class="pmme-version-error">历史变更尚未确认保存，请先点击顶部“重试保存”。</p>':''}${size>HISTORY_WARNING_BYTES?`<p class="pmme-group-warning">历史占用约 ${(size/1024/1024).toFixed(1)} MiB，会随酒馆设置一起保存。可手动删除不再需要的记录，不会自动清理版本。</p>`:''}<label class="pmme-field" for="pmme-history-search"><span>查找版本</span><input id="pmme-history-search" type="search" placeholder="版本号或更新说明" autocomplete="off"></label><div id="pmme-history-list"></div>`);
+        showSheet(`「${native.presetName()}」的历史版本`,`<p>完整保存的版本都保留在这里。载入旧版后可以继续编辑，再保存为新版本；不会删除后续版本。导出可下载该版的酒馆预设 JSON，不改变当前配置。</p>${historyError?'<p class="pmme-version-error">历史变更尚未确认保存，请先点击顶部“重试保存”。</p>':''}${size>HISTORY_WARNING_BYTES?`<p class="pmme-group-warning">历史占用约 ${(size/1024/1024).toFixed(1)} MiB，会随酒馆设置一起保存。可手动删除不再需要的记录，不会自动清理版本。</p>`:''}<label class="pmme-field" for="pmme-history-search"><span>查找版本</span><input id="pmme-history-search" type="search" placeholder="版本号或更新说明" autocomplete="off"></label><div id="pmme-history-list"></div>`);
         renderHistoryList();
     } catch(error) { notify(error.message,true); }
 }
 function showHistoryVersion(id) {
     const record=versionById(historyStore(),native.presetName(),id);
     if(!record)throw new Error('历史版本已不存在，请重新打开列表。');
-    showSheet(`查看 ${record.version}`,`<p>${escape(historyTime(record.createdAt))} · ${escape(record.note||'未填写更新说明')}</p><p>只读预览。包含全部条目库、角色排列、预设参数和分组记录。</p><div class="pmme-history-preview">${(record.preset?.prompts||[]).map(prompt=>`<details><summary>${escape(prompt.name||prompt.identifier)} <small>${escape(prompt.role||'占位符')}</small></summary><pre>${escape(prompt.content||'（无正文）')}</pre></details>`).join('')}</div><button class="pmme-button pmme-primary" data-pmme-action="history-load" data-pmme-version-id="${escape(id)}">载入此版本</button><button class="pmme-button" data-pmme-action="history-list">返回历史列表</button>`);
+    showSheet(`查看 ${record.version}`,`<p>${escape(historyTime(record.createdAt))} · ${escape(record.note||'未填写更新说明')}</p><p>只读预览。包含全部条目库、角色排列、预设参数和分组记录。</p><div class="pmme-history-preview">${(record.preset?.prompts||[]).map(prompt=>`<details><summary>${escape(prompt.name||prompt.identifier)} <small>${escape(prompt.role||'占位符')}</small></summary><pre>${escape(prompt.content||'（无正文）')}</pre></details>`).join('')}</div><button class="pmme-button pmme-primary" data-pmme-action="history-load" data-pmme-version-id="${escape(id)}">载入此版本</button><button type="button" class="pmme-button pmme-secondary" data-pmme-action="history-export" data-pmme-version-id="${escape(id)}" title="下载此版本的酒馆预设 JSON">导出预设</button><button class="pmme-button" data-pmme-action="history-list">返回历史列表</button>`);
+}
+function exportHistoryPreset(id) {
+    const record=versionById(historyStore(),native.presetName(),id);
+    if(!record)throw new Error('历史版本已不存在，请重新打开列表。');
+    let content;
+    try {
+        // Export the stored preset, not current settings or the history wrapper.
+        content=JSON.stringify(serializePreset(record.preset),null,2);
+    } catch {
+        throw new Error('此历史版本的预设数据不完整，无法导出。历史记录未改动。');
+    }
+    // At most 60 Unicode characters keep even a four-byte UTF-8 filename portable.
+    const filenamePart=(value,limit)=>Array.from(String(value)).slice(0,limit).join('').replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g,'_').trim().replace(/[. ]+$/u,'');
+    const filename=`${filenamePart(record.presetName,40)||'预设'}-${filenamePart(record.version,20)||'历史版本'}.json`;
+    download(content,filename,'application/json');
+    notify(`已发起历史版本 ${record.version} 的预设下载。`);
 }
 function historySignature() {
     return JSON.stringify([native.captureCurrentPreset(workspace.scope,workspace.historyLoaded?workspace.presetBase:null),workspace.ids,[...workspace.buffers].map(([id,buffer])=>[id,buffer.values]),[...workspace.drafts],workspace.groupDefinitions,groupsForPreset(config().groupsByScope,native.presetName())]);
@@ -1222,6 +1239,7 @@ function bindUI(){
             const versionId=button.closest('[data-pmme-version-id]')?.dataset.pmmeVersionId;
             if(kind==='history-list'){showHistory();return;}
             if(kind==='history-view'){showHistoryVersion(versionId);return;}
+            if(kind==='history-export'){exportHistoryPreset(versionId);return;}
             if(kind==='history-load'){requestHistoryLoad(versionId);return;}
             if(kind==='history-save-load'||kind==='history-discard-load'||kind==='history-confirm-load'){await loadHistory(kind==='history-save-load');return;}
             if(kind==='history-delete'){requestHistoryDelete(versionId);return;}
