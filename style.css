@@ -205,23 +205,6 @@
 #pmme-root .pmme-editor-footer { display: flex; gap: 8px; align-items: center; }
 #pmme-root .pmme-source { border: 1px dashed var(--pmme-line); padding: 16px; border-radius: 10px; color: var(--pmme-muted); font-size: 13px; line-height: 1.8; }
 #pmme-root .pmme-footnote { padding-block: 16px 22px; font-size: 12px; color: var(--pmme-muted); }
-#pmme-root .pmme-full-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 59px; flex: 0 0 auto; border-bottom: 1px solid var(--pmme-line); }
-#pmme-root .pmme-full-heading { display: grid; gap: 2px; min-width: 0; flex: 1; text-align: center; }
-#pmme-root .pmme-full-actions { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
-#pmme-root #pmme-full-title { font-size: 14px; overflow-wrap: anywhere; }
-#pmme-root #pmme-full-status { font-size: 11px; color: var(--pmme-muted); }
-#pmme-root .pmme-full-header .pmme-quiet { padding-inline: 0; }
-#pmme-root .pmme-full-context { font-size: 11px; color: var(--pmme-muted); padding-block: 8px 2px; flex: 0 0 auto; overflow-wrap: anywhere; }
-#pmme-root .pmme-full-slot { flex: 1; min-height: 0; display: flex; }
-#pmme-root.pmme-full .pmme-editor { flex: 1; min-height: 0; padding-block: 12px 10px; }
-#pmme-root.pmme-full .pmme-body-field { flex: 1; min-height: 90px; }
-#pmme-root.pmme-full textarea { flex: 1; height: 100%; min-height: 80px; }
-#pmme-root.pmme-full .pmme-editor-meta, #pmme-root.pmme-full .pmme-editor-footer, #pmme-root.pmme-full .pmme-advanced, #pmme-root.pmme-full .pmme-check { flex: 0 0 auto; }
-#pmme-root.pmme-full .pmme-advanced[open] .pmme-advanced-fields { max-height: 190px; overflow-y: auto; }
-#pmme-root .pmme-full-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 52px; padding-block: 5px; border-top: 1px solid var(--pmme-line); flex: 0 0 auto; }
-#pmme-root #pmme-position { font-size: 11px; color: var(--pmme-muted); font-variant-numeric: tabular-nums; }
-#pmme-root.pmme-typing .pmme-editor-meta, #pmme-root.pmme-typing .pmme-advanced, #pmme-root.pmme-typing .pmme-full-nav, #pmme-root.pmme-typing .pmme-full-context, #pmme-root.pmme-typing .pmme-check { display: none; }
-#pmme-root.pmme-typing .pmme-editor { padding-top: 6px; }
 #pmme-root .pmme-sheet-layer { position: absolute; inset: 0; z-index: 30000; display: flex; align-items: flex-end; justify-content: center; }
 #pmme-root .pmme-backdrop { position: absolute; inset: 0; background: var(--pmme-backdrop); }
 #pmme-root .pmme-sheet { position: relative; width: 100%; max-width: 680px; max-height: 85%; overflow-y: auto; padding-top: 9px; padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); border: 1px solid var(--pmme-line); border-bottom: 0; border-radius: 20px 20px 0 0; background: var(--pmme-surface); box-shadow: 0 -8px 35px var(--pmme-shadow); }
@@ -374,9 +357,6 @@
 #pmme-root[data-pmme-layout="desktop"] .pmme-editor-footer .pmme-button { min-height: 38px; padding-block: 6px; }
 #pmme-root[data-pmme-layout="desktop"] #pmme-save { flex: 0 0 auto; min-width: 120px; }
 #pmme-root[data-pmme-layout="desktop"] .pmme-detail-slot #pmme-expand { display: none; }
-#pmme-root[data-pmme-layout="desktop"] .pmme-full-header { min-height: 64px; padding-inline: 24px; }
-#pmme-root[data-pmme-layout="desktop"] .pmme-full-slot > .pmme-editor { width: 100%; max-width: 1120px; margin-inline: auto; }
-#pmme-root[data-pmme-layout="desktop"] :is(.pmme-full-context, .pmme-full-nav) { width: 100%; max-width: 1152px; margin-inline: auto; }
 #pmme-root[data-pmme-layout="desktop"] .pmme-sheet-layer { align-items: center; padding: 16px; }
 #pmme-root[data-pmme-layout="desktop"] .pmme-sheet { width: min(560px, 100%); max-height: min(85%, 720px); padding: 20px; border: 1px solid var(--pmme-line); border-radius: 14px; box-shadow: 0 12px 40px var(--pmme-shadow); }
 #pmme-root[data-pmme-layout="desktop"] .pmme-sheet-handle { display: none; }
@@ -384,5 +364,35 @@
 #pmme-root[data-pmme-layout="desktop"] .pmme-sheet-layer.pmme-popover { padding: 0; }
 #pmme-root[data-pmme-layout="desktop"] .pmme-popover .pmme-sheet { position: absolute; left: var(--pmme-sheet-left, 16px); top: var(--pmme-sheet-top, 16px); width: min(360px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 14px; border-radius: 12px; }
 #pmme-root[data-pmme-layout="desktop"] .pmme-popover .pmme-backdrop { background: color-mix(in srgb, var(--pmme-backdrop) 28%, transparent); }
+
+/* Body-only fullscreen fills the viewport, independent of the directory layout.
+   The textarea stays full width; its inner gutters keep long lines readable. */
+#pmme-root.pmme-full .pmme-frame { max-width: none; border-inline: 0; }
+#pmme-root .pmme-full-header { display: flex; align-items: center; gap: 8px; min-height: 64px; padding-block: 8px; flex: 0 0 auto; border-bottom: 1px solid var(--pmme-line); background: var(--pmme-surface); }
+#pmme-root .pmme-full-heading { display: grid; gap: 2px; min-width: 0; flex: 1; text-align: left; }
+#pmme-root .pmme-full-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+#pmme-root #pmme-full-title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#pmme-root #pmme-full-status { font-size: 11px; color: var(--pmme-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#pmme-root #pmme-full-status.pmme-pending { color: var(--pmme-warning); }
+#pmme-root #pmme-collapse { flex: 0 0 auto; }
+#pmme-root .pmme-full-slot { flex: 1; min-width: 0; min-height: 0; display: flex; }
+#pmme-root .pmme-full-slot > .pmme-body-field { flex: 1; min-width: 0; min-height: 0; gap: 0; }
+#pmme-root .pmme-full-slot > .pmme-body-field > label { display: none; }
+#pmme-root .pmme-full-slot #pmme-content {
+    flex: 1; height: 0; min-height: 0; margin: 0; border: 0; border-radius: 0;
+    padding-block: 24px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px), calc((100% - 80ch) / 2));
+    padding-right: max(16px, env(safe-area-inset-right, 0px), calc((100% - 80ch) / 2));
+    font-size: 16px; line-height: 1.9; overflow-y: auto; overscroll-behavior: contain;
+}
+#pmme-root .pmme-full-slot #pmme-content:focus-visible { outline-offset: -3px; }
+@media (max-width: 599px) {
+    #pmme-root #pmme-collapse { width: 44px; padding-inline: 0; }
+    #pmme-root #pmme-collapse > span { display: none; }
+    #pmme-root .pmme-full-header { min-height: 60px; }
+}
+@media (min-width: 768px) {
+    #pmme-root .pmme-full-slot #pmme-content { font-size: 18px; padding-block: 32px; }
+}
 
 @media (prefers-reduced-motion: no-preference) { #pmme-root button { transition: background .15s ease, color .15s ease; } #pmme-root .pmme-switch-track { transition: background .15s ease, border-color .15s ease; } #pmme-root .pmme-switch-track::before { transition: transform .15s ease; } }

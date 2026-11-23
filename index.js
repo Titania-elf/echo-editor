@@ -21,7 +21,7 @@ const THEMES = [
 ];
 const LAYOUTS = [
     {id:'auto', label:'自动', description:'宽窗口使用电脑双栏，窄窗口保留手机单栏。'},
-    {id:'mobile', label:'手机单栏', description:'使用原来的目录内编辑与全屏写作布局。'},
+    {id:'mobile', label:'手机单栏', description:'在目录内编辑条目，长正文可单独全屏阅读和写作。'},
     {id:'desktop', label:'电脑双栏', description:'左侧目录、右侧编辑；窗口过窄时临时使用单栏。'},
 ];
 const iconPaths = {
@@ -225,25 +225,24 @@ function makeRoot() {
           </aside>
           <div id="pmme-splitter" class="pmme-splitter" role="separator" aria-orientation="vertical" aria-label="调整条目目录宽度" aria-controls="pmme-directory-pane" tabindex="0" title="拖动调整目录宽度；方向键微调，双击恢复默认"></div>
           <section id="pmme-detail-pane" class="pmme-detail-pane" aria-label="当前条目编辑">
-            <header class="pmme-detail-header"><div class="pmme-detail-heading"><p id="pmme-detail-context" class="pmme-detail-context"></p><h3 id="pmme-detail-title">选择一个条目</h3></div><div id="pmme-detail-actions" class="pmme-detail-actions" hidden><button id="pmme-detail-expand" class="pmme-button pmme-quiet">${icon('expand')}全屏</button><button id="pmme-detail-menu" class="pmme-icon-button" aria-label="当前条目的更多操作">${icon('more')}</button></div></header>
+            <header class="pmme-detail-header"><div class="pmme-detail-heading"><p id="pmme-detail-context" class="pmme-detail-context"></p><h3 id="pmme-detail-title">选择一个条目</h3></div><div id="pmme-detail-actions" class="pmme-detail-actions" hidden><button id="pmme-detail-expand" class="pmme-button pmme-quiet" aria-label="全屏编辑正文" aria-controls="pmme-full-view">${icon('expand')}全屏</button><button id="pmme-detail-menu" class="pmme-icon-button" aria-label="当前条目的更多操作">${icon('more')}</button></div></header>
             <p id="pmme-detail-filter-note" class="pmme-detail-filter-note" hidden>当前条目不在搜索结果中，可以继续编辑。</p>
             <div id="pmme-detail-empty" class="pmme-empty pmme-detail-empty"><p>从左侧选择条目开始编辑</p></div>
             <div id="pmme-detail-slot" class="pmme-detail-slot" hidden></div>
           </section>
         </div>
       </div>
-      <div id="pmme-full-view" class="pmme-full-view" hidden>
-        <header class="pmme-full-header pmme-gutter"><button id="pmme-collapse" class="pmme-button pmme-quiet">${icon('back')}收起</button><div class="pmme-full-heading"><strong id="pmme-full-title"></strong><span id="pmme-full-status"></span></div><div class="pmme-full-actions"><button id="pmme-full-theme-control" type="button" class="pmme-button pmme-theme-control" aria-label="选择界面主题"></button><button id="pmme-full-menu" class="pmme-icon-button" aria-label="当前条目的更多操作">${icon('more')}</button></div></header>
-        <p id="pmme-full-context" class="pmme-full-context pmme-gutter"></p><div id="pmme-full-slot" class="pmme-full-slot pmme-gutter"></div>
-        <nav class="pmme-full-nav pmme-gutter"><button id="pmme-previous" class="pmme-button pmme-quiet">${icon('back')}上一条</button><span id="pmme-position"></span><button id="pmme-next" class="pmme-button pmme-quiet">下一条${icon('next')}</button></nav>
-      </div>
+      <section id="pmme-full-view" class="pmme-full-view" aria-label="正文全屏编辑" hidden>
+        <header class="pmme-full-header pmme-gutter"><button id="pmme-collapse" type="button" class="pmme-button pmme-quiet" aria-label="退出正文全屏，返回条目编辑" title="退出全屏（Esc）">${icon('back')}<span>退出全屏</span></button><div class="pmme-full-heading"><strong id="pmme-full-title"></strong><span id="pmme-full-status"></span></div><div class="pmme-full-actions"><button id="pmme-full-theme-control" type="button" class="pmme-button pmme-theme-control" aria-label="选择界面主题"></button><button id="pmme-full-save" type="button" class="pmme-button pmme-primary" title="保存当前条目（Ctrl / ⌘ + S），不更新命名预设">保存条目</button></div></header>
+        <div id="pmme-full-slot" class="pmme-full-slot"></div>
+      </section>
       <div id="pmme-parking" hidden><section id="pmme-editor" class="pmme-editor" aria-label="条目编辑">
         <div class="pmme-editor-meta"><label class="pmme-field pmme-grow" for="pmme-name"><span>条目标题</span><input id="pmme-name" type="text" placeholder="先写内容，标题稍后补" autocomplete="off"></label><label class="pmme-field pmme-role-field" for="pmme-role"><span>消息角色</span><select id="pmme-role"><option value="system">System</option><option value="user">User</option><option value="assistant">Assistant</option></select></label></div>
-        <div id="pmme-body-field" class="pmme-body-field"><label for="pmme-content"><span>正文</span><output id="pmme-chars"></output></label><textarea id="pmme-content" placeholder="从这里开始写……" spellcheck="false" data-macros></textarea></div>
+        <div id="pmme-body-field" class="pmme-body-field"><label for="pmme-content"><span>正文</span><output id="pmme-chars"></output></label><textarea id="pmme-content" aria-label="条目正文" placeholder="从这里开始写……" spellcheck="false" data-macros></textarea></div>
         <div id="pmme-source" class="pmme-source" hidden></div>
         <details id="pmme-advanced" class="pmme-advanced"><summary>高级设置${icon('chevron')}</summary><div class="pmme-advanced-fields"><label class="pmme-field" for="pmme-injection"><span>注入位置</span><select id="pmme-injection"><option value="0">按预设排列</option><option value="1">聊天内注入</option></select></label><div id="pmme-depth-fields" class="pmme-row" hidden><label class="pmme-field pmme-grow" for="pmme-depth"><span>聊天深度</span><input id="pmme-depth" type="number" min="0" max="9999" step="1"></label><label class="pmme-field pmme-grow" for="pmme-order"><span>注入顺序</span><input id="pmme-order" type="number" min="0" max="9999" step="1"></label></div><p id="pmme-depth-note" class="pmme-small" hidden>聊天内注入受深度和顺序控制，不只取决于目录位置。</p><div class="pmme-field"><span>触发条件（不选则不限制）</span><div class="pmme-triggers">${TRIGGERS.map((trigger,i)=>`<label for="pmme-trigger-${trigger}"><input id="pmme-trigger-${trigger}" type="checkbox" value="${trigger}">${['普通发送','继续','代写','滑动','重新生成','静默'][i]}</label>`).join('')}</div></div><label id="pmme-override-field" class="pmme-check" for="pmme-overrides" hidden><input id="pmme-overrides" type="checkbox">禁止角色卡覆盖此条目</label></div></details>
         <label id="pmme-enable-field" class="pmme-check" for="pmme-enable-new" hidden><input id="pmme-enable-new" type="checkbox">首次保存后启用（草稿不参与发送）</label>
-        <div class="pmme-editor-footer"><span id="pmme-editor-status" class="pmme-editor-status"></span><button id="pmme-discard" class="pmme-button pmme-quiet">放弃</button><button id="pmme-expand" class="pmme-button">${icon('expand')}全屏</button><button id="pmme-new-after" class="pmme-button" hidden>${icon('plus')}新增</button><button id="pmme-save" class="pmme-button pmme-primary pmme-grow">保存条目</button></div>
+        <div class="pmme-editor-footer"><span id="pmme-editor-status" class="pmme-editor-status"></span><button id="pmme-discard" class="pmme-button pmme-quiet">放弃</button><button id="pmme-expand" class="pmme-button" aria-label="全屏编辑正文" aria-controls="pmme-full-view">${icon('expand')}全屏</button><button id="pmme-save" class="pmme-button pmme-primary pmme-grow">保存条目</button></div>
       </section></div>
     </div><div id="pmme-sheet-layer" class="pmme-sheet-layer" hidden><div id="pmme-backdrop" class="pmme-backdrop"></div><section class="pmme-sheet pmme-gutter" role="dialog" aria-modal="true" aria-labelledby="pmme-sheet-title"><div class="pmme-sheet-handle"></div><header><h3 id="pmme-sheet-title"></h3><button id="pmme-sheet-close" class="pmme-icon-button" aria-label="关闭操作面板">${icon('close')}</button></header><div id="pmme-sheet-body"></div></section></div><div id="pmme-toast" class="pmme-toast" role="status" aria-live="polite" hidden></div>`;
     document.body.appendChild(root);
@@ -314,24 +313,30 @@ function makeWorkspace() {
     syncWorkspace();
 }
 function rememberCursor() {
-    // Hidden textareas can report zero scroll; never overwrite a captured cursor
-    // while switching layouts, reopening the page, or parking the editor.
-    const editor=$('editor'),id=editor.dataset.entryId;if(!id||!workspace||!editor.getClientRects().length)return;
-    // Resize reflow happens before the resize event: the outgoing desktop pane
-    // may already be squeezed to zero width. Keep its last stable cursor instead.
+    // Fullscreen moves only the body field; its metadata editor stays hidden.
+    // Never replace a stable cursor with the zero scroll of a parked textarea.
+    const editor=$('editor'),id=editor.dataset.entryId;
+    if(!id||!workspace||!(workspace.full?$('body-field'):editor).getClientRects().length)return;
+    // Resize reflow can squeeze the outgoing desktop pane before its event fires.
     const width=document.documentElement.clientWidth || window.innerWidth;
-    if(root.dataset.pmmeLayout!==resolveLayout(config().layout,width))return;
-    workspace.cursors.set(id,{start:$('content').selectionStart,end:$('content').selectionEnd,scroll:$('content').scrollTop,nameStart:$('name').selectionStart,nameEnd:$('name').selectionEnd});
+    if(!workspace.full&&root.dataset.pmmeLayout!==resolveLayout(config().layout,width))return;
+    workspace.cursors.set(id,{start:$('content').selectionStart,end:$('content').selectionEnd,direction:$('content').selectionDirection,scroll:$('content').scrollTop,nameStart:$('name').selectionStart,nameEnd:$('name').selectionEnd,nameDirection:$('name').selectionDirection});
 }
 function restoreCursor() {
     const cursor=workspace.cursors.get(workspace.selected);if(!cursor)return;
-    $('content').setSelectionRange(cursor.start,cursor.end);$('content').scrollTop=cursor.scroll;
-    $('name').setSelectionRange(cursor.nameStart,cursor.nameEnd);
+    $('content').setSelectionRange(cursor.start,cursor.end,cursor.direction||'none');$('content').scrollTop=cursor.scroll;
+    $('name').setSelectionRange(cursor.nameStart,cursor.nameEnd,cursor.nameDirection||'none');
 }
 function setView() {
+    const prompt=workspace.selected&&promptFor(workspace.selected);
+    const canExpand=Boolean(prompt&&(workspace.drafts.has(workspace.selected)||native.permissions(prompt).content));
+    if(!canExpand)workspace.full=false;
+    // Reparent the same textarea, never copy it into a second editor.
+    const body=$('body-field'),target=workspace.full?$('full-slot'):$('editor');
+    if(body.parentElement!==target){if(workspace.full)target.appendChild(body);else target.insertBefore(body,$('source'));}
     $('directory-view').hidden=workspace.full;$('full-view').hidden=!workspace.full;
     root.classList.toggle('pmme-full',workspace.full);
-    $('expand').hidden=workspace.full;$('new-after').hidden=!workspace.full;
+    $('expand').hidden=!canExpand;$('detail-expand').hidden=!canExpand;
     const selected=Boolean(workspace.selected&&(!workspace.organizing||isDesktop()));
     $('detail-slot').hidden=!selected;$('detail-empty').hidden=selected;$('detail-actions').hidden=!selected;
 }
@@ -556,11 +561,11 @@ function paintGroupStates() {
 }
 function renderList(captureCursor=true) {
     if(!workspace)return;
-    const editor=$('editor'),focus=editor.contains(document.activeElement)?document.activeElement.id:null,scroll=$('scroll').scrollTop;
+    const editor=$('editor'),active=document.activeElement,focus=editor.contains(active)||$('body-field').contains(active)?active.id:null,scroll=$('scroll').scrollTop;
     if(captureCursor)rememberCursor();sorter?.cancel();syncWorkspace();setView();
     const selected=Boolean(workspace.selected&&(!workspace.organizing||isDesktop()));
-    const persistentSlot=workspace.full?$('full-slot'):isDesktop()?$('detail-slot'):null;
-    // A desktop directory redraw must not detach the focused editor or interrupt input.
+    const persistentSlot=isDesktop()?$('detail-slot'):null;
+    // The metadata editor stays in its normal pane, even in body-only fullscreen.
     if(!isDesktop()||!selected||editor.parentElement!==persistentSlot)$('parking').appendChild(editor);
     const view=resolveWorkspaceGroups();workspace.orderMap=new Map(native.nativeOrder().map(entry=>[entry.identifier,entry]));
     workspace.searchMatches=searchEntries(currentEntries(),workspace.query,{titleOnly:workspace.titleOnly});
@@ -570,9 +575,15 @@ function renderList(captureCursor=true) {
     $('list').innerHTML=renderTree(view.tree);
     if(!workspace.ids.length)$('list').innerHTML='<div class="pmme-empty"><p>当前排列还没有条目</p><button class="pmme-button pmme-primary" data-pmme-create-first>创建第一个条目</button></div>';
     else if(hasSearch()&&!workspace.visibleIds.size)$('list').innerHTML='<div class="pmme-empty"><p>没有匹配条目，试试其他关键词</p><button class="pmme-button" data-pmme-clear-query>清空搜索</button></div>';
-    if(selected){const slot=persistentSlot||$(`slot-${workspace.selected}`);if(slot){if(editor.parentElement!==slot)slot.appendChild(editor);loadEditor();}}
+    if(selected){
+        const slot=persistentSlot||$(`slot-${workspace.selected}`);
+        if(slot&&editor.parentElement!==slot)slot.appendChild(editor);
+        // Body edits can stop matching a mobile search while fullscreen stays open.
+        if(slot||workspace.full)loadEditor();
+    }
     $('scroll').scrollTop=scroll;
-    if(focus&&selected&&editor.getClientRects().length)document.getElementById(focus)?.focus({preventScroll:true});
+    const focused=focus&&document.getElementById(focus);
+    if(selected&&focused?.getClientRects().length)focused.focus({preventScroll:true});
     paintStatus();paintBusy();
 }
 function loadEditor() {
@@ -580,7 +591,7 @@ function loadEditor() {
     const draft=workspace.drafts.get(id),allowed=draft?{edit:true,content:true,overrides:false}:native.permissions(prompt),v=buffer.values;
     $('editor').dataset.entryId=id;
     for(const [field,value]of Object.entries({name:v.name,role:v.role,content:v.content,injection:v.injection_position,depth:v.injection_depth,order:v.injection_order})){
-        const control=$(field);if(!isDesktop()||control.value!==String(value))control.value=value;
+        const control=$(field);if(control.value!==String(value))control.value=value;
     }
     $('overrides').checked=v.forbid_overrides;
     TRIGGERS.forEach(t=>{$(`trigger-${t}`).checked=v.injection_trigger.includes(t);});
@@ -590,6 +601,7 @@ function loadEditor() {
     $('source').textContent=allowed.edit?'正文由角色卡、世界书或其他来源提供，不能在这里改写；可调整其他原生允许的属性。':'该占位符内容由酒馆生成，保留原生编辑限制。可在目录中整理它的位置。';
     $('advanced').hidden=!allowed.edit;$('override-field').hidden=!allowed.overrides;$('enable-field').hidden=!draft;
     $('save').hidden=!allowed.edit;$('discard').hidden=!allowed.edit;$('save').textContent=draft?'保存并加入':'保存条目';
+    $('full-save').hidden=!allowed.content;$('full-save').textContent=$('save').textContent;
     updateAdvanced();restoreCursor();paintStatus();
 }
 function updateAdvanced(){const chat=$('injection').value==='1';$('depth-fields').hidden=!chat;$('depth-note').hidden=!chat;}
@@ -613,12 +625,13 @@ function paintStatus() {
     const chars=`${Array.from(buffer.values.content).length} 字`,changed=hasDraft(id);
     const entryStatus=workspace.drafts.has(id)?'草稿 · 尚未加入发送':draftChanged(buffer)?'修改未保存':workspace.settingsSaveFailed?'修改已应用 · 后台保存失败':workspace.backgroundSaving?'修改已应用 · 正在后台保存':workspace.settingsUnconfirmed?'修改已应用 · 等待保存确认':'条目已保存';
     $('chars').textContent=chars;$('discard').disabled=busy||!changed;
-    $('full-title').textContent=titleFor(id);$('full-status').textContent=isDesktop()?entryStatus:workspace.drafts.has(id)?'草稿 · 尚未加入发送':draftChanged(buffer)?'修改未保存':workspace.settingsUnconfirmed?'修改已应用':'条目已保存';
-    $('full-context').textContent=index?`位于「${titleFor(workspace.ids[index-1])}」之后`:'位于预设开头';$('position').textContent=`${index+1} / ${workspace.ids.length}`;
+    $('full-title').textContent=titleFor(id);$('full-title').title=titleFor(id);
+    $('full-status').textContent=`${chars} · ${entryStatus}`;$('full-status').title=$('full-status').textContent;
+    $('full-status').classList.toggle('pmme-pending',changed||workspace.settingsUnconfirmed);
+    const context=index?`位于「${titleFor(workspace.ids[index-1])}」之后`:'位于预设开头';
     $('detail-title').textContent=titleFor(id);$('detail-title').title=titleFor(id);
-    $('detail-context').textContent=workspace.groupView?.groups.filter(group=>group.ids.includes(id)).sort((a,b)=>b.ids.length-a.ids.length).map(group=>group.name).join(' / ')||$('full-context').textContent;
+    $('detail-context').textContent=workspace.groupView?.groups.filter(group=>group.ids.includes(id)).sort((a,b)=>b.ids.length-a.ids.length).map(group=>group.name).join(' / ')||context;
     $('editor-status').textContent=`${chars} · ${entryStatus}`;$('editor-status').classList.toggle('pmme-pending',changed||workspace.settingsUnconfirmed);
-    $('previous').disabled=busy||index===0;$('next').disabled=busy||index===workspace.ids.length-1;
 }
 function paintBusy(){if(!busy)return;for(const control of root.querySelectorAll('button,input,select,textarea')){if(!disabledControls.has(control))disabledControls.set(control,control.disabled);control.disabled=true;}}
 function setBusy(value){busy=value;root.classList.toggle('pmme-busy',value);if(value)paintBusy();else{for(const [control,disabled]of disabledControls)if(control.isConnected)control.disabled=disabled;disabledControls.clear();}paintStatus();}
@@ -631,7 +644,16 @@ async function operation(action,label='正在处理…'){
     finally{busy=false;root.classList.remove('pmme-busy');for(const[control,disabled]of disabledControls)if(control.isConnected)control.disabled=disabled;disabledControls.clear();if(workspace&&!root.hidden){renderList();paintStatus();}native.refreshNative();}
 }
 function markApplied(ids){for(const id of ids){workspace.drafts.delete(id);const prompt=native.findPrompt(id);if(prompt){const base=normalizePrompt(prompt);workspace.buffers.set(id,{base,values:copy(base)});}}storeGroupPreferences();}
-function validateEditor(){for(const control of[$('depth'),$('order')])if(!control.hidden&&control.offsetParent&&!control.checkValidity()){control.reportValidity();return false;}return true;}
+function validateEditor(){
+    for(const control of[$('depth'),$('order')]){
+        const visible=control.offsetParent||(workspace.full&&$('advanced').open&&!$('advanced').hidden&&!$('depth-fields').hidden);
+        if(!control.hidden&&visible&&!control.checkValidity()){
+            if(workspace.full)collapse();
+            control.reportValidity();return false;
+        }
+    }
+    return true;
+}
 function applyIds(ids){
     syncWorkspace();const owner=workspace;
     const applied=native.applyBuffers({scope:owner.scope,ids,buffers:owner.buffers,drafts:owner.drafts,visibleOrder:owner.ids});
@@ -836,8 +858,20 @@ function createDraft(anchor,before=false,source=null){
     workspace.drafts.set(id,{prompt,enableOnSave:config().enableNewOnSave});workspace.buffers.set(id,{base:normalizePrompt({}),values:copy(values)});workspace.ids=insertId(workspace.ids,id,anchor,before);workspace.selected=id;workspace.organizing=false;
     revealEntry(id,true);renderList();if(!workspace.full)$(`row-${id}`)?.scrollIntoView({block:'nearest',behavior:'smooth'});$('name').focus({preventScroll:true});$('name').select();notify('草稿已占据位置，首次保存会自动加入排列。');
 }
-function expand(){if(!workspace.selected||busy)return;rememberCursor();workspace.scrollTop=$('scroll').scrollTop;workspace.full=true;setView();$('full-slot').appendChild($('editor'));restoreCursor();paintStatus();updateViewport();$('collapse').focus({preventScroll:true});}
-function collapse(){if(busy)return;rememberCursor();workspace.full=false;root.classList.remove('pmme-typing');if(!isDesktop())revealEntry(workspace.selected,true);renderList();$('scroll').scrollTop=workspace.scrollTop;(isDesktop()?$('detail-expand'):$('expand')).focus({preventScroll:true});}
+function expand(){
+    if(!workspace.selected||busy||workspace.full||$('body-field').hidden)return;
+    rememberCursor();workspace.scrollTop=$('scroll').scrollTop;workspace.fullEditorScrollTop=$('editor').scrollTop;
+    workspace.full=true;setView();restoreCursor();paintStatus();updateViewport();$('collapse').focus({preventScroll:true});
+}
+function collapse(){
+    if(busy||!workspace.full)return;
+    rememberCursor();workspace.full=false;renderList();
+    const reveal=!isDesktop()&&hasSearch()&&!workspace.visibleIds.has(workspace.selected);
+    if(reveal){revealEntry(workspace.selected,true);renderList(false);notify('正文已不匹配原搜索，已清空搜索并回到当前条目。');}
+    $('scroll').scrollTop=workspace.scrollTop;$('editor').scrollTop=workspace.fullEditorScrollTop||0;
+    if(reveal)$(`row-${workspace.selected}`)?.scrollIntoView({block:'nearest'});
+    (isDesktop()?$('detail-expand'):$('expand')).focus({preventScroll:true});
+}
 function organize(){if(busy)return;rememberCursor();if(workspace.full){workspace.full=false;setView();}workspace.organizing=!workspace.organizing;if(workspace.organizing){workspace.query='';workspace.searchScroll=null;}else if(workspace.selected&&!isDesktop())revealEntry(workspace.selected);renderList();}
 function groupById(id) { return resolveWorkspaceGroups().groups.find(group=>group.id===id); }
 function foldGroup(id) {
@@ -1094,7 +1128,7 @@ async function close(showNotice=true,force=false,restorePreset=true){
     }
     if(version!==navigationVersion){if(returningVersion===version)returningVersion=0;return;}
     returningVersion=0;
-    root.hidden=true;document.body.style.overflow=originalOverflow;root.classList.remove('pmme-typing');
+    root.hidden=true;document.body.style.overflow=originalOverflow;
     if(restorePreset)requestAnimationFrame(()=>restorePresetPosition(location,targetId,version));
     if(showNotice&&workspace&&pendingIds().length)notify('草稿在本次页面中保留；刷新前请保存。');
 }
@@ -1109,20 +1143,18 @@ function interceptPresetChange(event){
     showSheet('切换预设前处理修改',`<p>当前预设有草稿或尚未更新的配置。直接切换会用目标预设覆盖当前配置；保存时会新增一个历史版本。</p>${versionFields()}<button class="pmme-button pmme-primary" data-pmme-action="save-switch">保存修改并更新后切换</button><button class="pmme-button pmme-danger" data-pmme-action="discard-switch">放弃当前改动并切换</button><button class="pmme-button pmme-quiet" data-pmme-action="close">取消切换</button>`);
     versionConfirmation={owner:workspace,epoch,scope:workspace.scope};
 }
-function interceptNativeClick(event){
+function interceptNativeCreate(event){
+    // Keep the legacy preference key for creation; native edit pencils never redirect.
     if(!config().enabled||!config().interceptNative||event.shiftKey)return;
     const target=event.target instanceof Element?event.target:null,managerRoot=target?.closest('#completion_prompt_manager');if(!managerRoot)return;
-    const edit=target.closest('.prompt-manager-edit-action'),create=target.closest('.completion_prompt_manager_footer .fa-plus-square');
-    if(!edit&&!create)return;
+    const create=target.closest('.completion_prompt_manager_footer .fa-plus-square');if(!create)return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-    const id=edit?.closest('[data-pm-identifier]')?.dataset.pmIdentifier;
-    open(id||null);if(create&&!root.hidden)createDraft(workspace.selected);
+    open();if(!root.hidden)createDraft(workspace.selected);
 }
 function updateViewport(){
     if(!root||root.hidden)return;const viewport=window.visualViewport;
     if(viewport){root.style.setProperty('--pmme-height',`${viewport.height}px`);root.style.setProperty('--pmme-top',`${viewport.offsetTop}px`);}
     applyLayout();
-    root.classList.toggle('pmme-typing',Boolean(!isDesktop()&&workspace?.full&&document.activeElement===$('content')&&viewport&&viewport.height<window.innerHeight*.8));
 }
 function mountEntryButton(){
     const manager=document.getElementById('completion_prompt_manager');if(!manager)return;
@@ -1135,14 +1167,13 @@ function bindUI(){
     $('history').addEventListener('click',showHistory);
     $('batch-replace').addEventListener('click',openContentReplacement);$('replace-review').addEventListener('click',()=>{try{showReplacementResult();}catch(error){notify(error.message,true);}});
     $('theme-control').addEventListener('click',showAppearancePicker);$('full-theme-control').addEventListener('click',showAppearancePicker);$('layout-control').addEventListener('click',showLayoutPicker);
-    $('close').addEventListener('click',()=>close());$('new-after').addEventListener('click',()=>createDraft(workspace.selected));$('library').addEventListener('click',openLibrary);$('organize').addEventListener('click',organize);$('expand').addEventListener('click',expand);$('collapse').addEventListener('click',collapse);$('save').addEventListener('click',saveSelected);$('update').addEventListener('click',requestUpdate);$('discard').addEventListener('click',()=>discardRequest());$('full-menu').addEventListener('click',()=>entryMenu(workspace.selected,$('full-menu')));
+    $('close').addEventListener('click',()=>close());$('library').addEventListener('click',openLibrary);$('organize').addEventListener('click',organize);$('expand').addEventListener('click',expand);$('collapse').addEventListener('click',collapse);$('save').addEventListener('click',saveSelected);$('full-save').addEventListener('click',saveSelected);$('update').addEventListener('click',requestUpdate);$('discard').addEventListener('click',()=>discardRequest());
     $('desktop-close').addEventListener('click',()=>close());
     $('detail-expand').addEventListener('click',expand);$('detail-menu').addEventListener('click',()=>entryMenu(workspace.selected,$('detail-menu')));
     $('directory-search').addEventListener('input',event=>{if(!busy)setSearchQuery(event.target.value);});
     $('clear-search').addEventListener('click',()=>{if(busy)return;setSearchQuery('');$('directory-search').focus();});
     $('search-titles').addEventListener('change',event=>{if(busy)return;workspace.titleOnly=event.target.checked;renderList();});
     $('groups').addEventListener('click',()=>{if(busy)return;try{showGroupTools();}catch(error){notify(error.message,true);}});
-    $('previous').addEventListener('click',()=>{const index=workspace.ids.indexOf(workspace.selected);if(index>0)select(workspace.ids[index-1]);});$('next').addEventListener('click',()=>{const index=workspace.ids.indexOf(workspace.selected);if(index<workspace.ids.length-1)select(workspace.ids[index+1]);});
     $('list').addEventListener('click',event=>{
         if(busy)return;const button=event.target.closest('button');if(!button||button.disabled)return;
         if(button.hasAttribute('data-pmme-create-first')){createDraft(null);return;}
@@ -1154,14 +1185,15 @@ function bindUI(){
         if(button.dataset.pmmeMenu)entryMenu(button.dataset.pmmeMenu,button);
         if(button.dataset.pmmeToggle){const id=button.dataset.pmmeToggle;if(workspace.drafts.has(id)){notify('草稿不参与发送；保存时可选择启用。');return;}try{const enabled=native.togglePrompt(workspace.scope,id);paintToggle(id,enabled);settingsSaver.request(workspace);native.refreshNative();}catch(error){notify(error.message,true);}}
     });
-    $('editor').addEventListener('input',event=>{
-        if(busy||!workspace.selected)return;const buffer=bufferFor(workspace.selected),name=event.target.id.replace('pmme-',''),map={name:'name',role:'role',content:'content',injection:'injection_position',depth:'injection_depth',order:'injection_order',overrides:'forbid_overrides'};
+    root.addEventListener('input',event=>{
+        if(!event.target.closest('#pmme-editor, #pmme-body-field')||busy||!workspace.selected)return;
+        const buffer=bufferFor(workspace.selected),name=event.target.id.replace('pmme-',''),map={name:'name',role:'role',content:'content',injection:'injection_position',depth:'injection_depth',order:'injection_order',overrides:'forbid_overrides'};
         if(map[name])buffer.values[map[name]]=name==='overrides'?event.target.checked:['injection','depth','order'].includes(name)?Number(event.target.value):event.target.value;
         if(name.startsWith('trigger-'))buffer.values.injection_trigger=[...buffer.values.injection_trigger.filter(t=>!TRIGGERS.includes(t)),...TRIGGERS.filter(t=>$(`trigger-${t}`).checked)];
         if(name==='enable-new')workspace.drafts.get(workspace.selected).enableOnSave=event.target.checked;
         updateAdvanced();rememberCursor();paintStatus();
     });
-    $('editor').addEventListener('focusout',()=>{rememberCursor();requestAnimationFrame(updateViewport);});$('editor').addEventListener('focusin',updateViewport);$('content').addEventListener('select',rememberCursor);$('content').addEventListener('scroll',rememberCursor);
+    root.addEventListener('focusout',()=>{rememberCursor();requestAnimationFrame(updateViewport);});root.addEventListener('focusin',updateViewport);$('content').addEventListener('select',rememberCursor);$('content').addEventListener('scroll',rememberCursor);
     $('sheet-close').addEventListener('click',()=>closeSheet());$('backdrop').addEventListener('click',()=>{if(!busy)closeSheet();});
     $('sheet-body').addEventListener('input',event=>{
         if(event.target.id==='pmme-search')renderLibrary(event.target.value);if(event.target.id==='pmme-history-search')renderHistoryList(event.target.value);
@@ -1233,7 +1265,7 @@ function bindUI(){
     });
     // Keep the native configuration drawer open while interacting with our own page.
     root.addEventListener('click',event=>event.stopPropagation());
-    window.addEventListener('click',interceptNativeClick,true);window.addEventListener('change',interceptPresetChange,true);
+    window.addEventListener('click',interceptNativeCreate,true);window.addEventListener('change',interceptPresetChange,true);
     window.visualViewport?.addEventListener('resize',updateViewport);window.visualViewport?.addEventListener('scroll',updateViewport);window.addEventListener('resize',updateViewport);
     window.addEventListener('beforeunload',event=>{if(!config().enabled)return;const workspaces=new Set([...archives.values(),workspace].filter(Boolean));const unsaved=settingsSaver.isPending(preferencesOwner)||settingsSaver.isPending(historyOwner)||[...workspaces].some(w=>w.settingsUnconfirmed||w.drafts.size||[...w.buffers.values()].some(draftChanged));if(unsaved){event.preventDefault();event.returnValue='';}});
     bindSorter();bindDirectoryResize();
